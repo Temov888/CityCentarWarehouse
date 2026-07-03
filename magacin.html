@@ -1,0 +1,1727 @@
+<!-- Магацин — Евиденција на градежни материјали -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Магацин</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+/* ============================ TOKENS ============================ */
+:root{
+  --paper:#F3F2EE;
+  --surface:#FFFFFF;
+  --surface-2:#FBFAF7;
+  --ink:#1A1917;
+  --ink-2:#4A463F;
+  --muted:#8C877C;
+  --faint:#B4AFA3;
+  --line:#E7E3DB;
+  --line-2:#EFECE5;
+
+  --ok:#2E9E5B;      --ok-t:#1F7D46;   --ok-bg:#E8F3EC;
+  --warn:#E0A500;    --warn-t:#9A6E00;  --warn-bg:#FBF1D3;
+  --danger:#E23D2E;  --danger-t:#B32C20; --danger-bg:#FBE7E4;
+  --info:#3B6EA8;    --info-bg:#E9F0F7;
+
+  --r-xs:8px; --r-sm:10px; --r:14px; --r-lg:18px; --r-xl:24px; --r-full:999px;
+
+  --sh-1:0 1px 2px rgba(26,25,23,.04), 0 1px 2px rgba(26,25,23,.03);
+  --sh-2:0 4px 14px -4px rgba(26,25,23,.10), 0 2px 6px -3px rgba(26,25,23,.06);
+  --sh-pop:0 20px 60px -12px rgba(26,25,23,.26), 0 6px 18px -8px rgba(26,25,23,.14);
+
+  --sans:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+
+  --ease:cubic-bezier(.32,.72,.26,1);
+  --nav-w:250px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--sans);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  font-feature-settings:"ss01","cv11";
+  overflow:hidden;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+.mono{font-family:var(--mono);font-feature-settings:normal;letter-spacing:-.02em}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+::selection{background:#1A1917;color:#fff}
+
+svg{display:block}
+.ic{width:20px;height:20px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ic-sm{width:16px;height:16px}
+.ic-lg{width:22px;height:22px}
+
+/* scrollbars */
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:#D9D5CB;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:#C7C2B6;background-clip:content-box}
+
+/* ============================ SHELL ============================ */
+.app{display:flex;height:100dvh;width:100%}
+
+/* ---- Sidebar ---- */
+.nav{
+  width:var(--nav-w); flex:none; height:100%;
+  background:var(--surface);
+  border-right:1px solid var(--line);
+  display:flex; flex-direction:column;
+  padding:20px 14px 16px;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:6px 8px 20px}
+.brand-mark{
+  width:38px;height:38px;border-radius:11px;flex:none;
+  background:linear-gradient(150deg,#26241F,#1A1917);
+  display:grid;place-items:center;color:#F3F2EE;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), var(--sh-1);
+}
+.brand-mark svg{width:20px;height:20px;stroke-width:2}
+.brand-txt b{font-weight:700;font-size:15.5px;letter-spacing:-.02em;display:block;line-height:1.1}
+.brand-txt span{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+
+.nav-scroll{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px}
+.nav-label{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;padding:14px 10px 6px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:9px 10px;border-radius:var(--r-sm);
+  color:var(--ink-2);font-weight:600;font-size:14px;
+  transition:background .16s var(--ease),color .16s var(--ease);
+  position:relative;text-align:left;
+}
+.nav-item .ic{color:var(--muted);transition:color .16s var(--ease)}
+.nav-item:hover{background:var(--surface-2)}
+.nav-item:hover .ic{color:var(--ink-2)}
+.nav-item.on{background:#1A1917;color:#F7F6F3}
+.nav-item.on .ic{color:#F7F6F3}
+.nav-item .badge{margin-left:auto}
+.nav-foot{padding-top:10px;border-top:1px solid var(--line-2);margin-top:8px}
+
+.badge{
+  min-width:20px;height:20px;padding:0 6px;border-radius:var(--r-full);
+  font-size:11.5px;font-weight:700;display:inline-grid;place-items:center;
+  background:var(--danger);color:#fff;font-variant-numeric:tabular-nums;
+}
+.badge.warn{background:var(--warn);color:#5C4500}
+.nav-item.on .badge{box-shadow:0 0 0 2px #1A1917}
+
+/* ---- Main ---- */
+.main{flex:1;height:100%;display:flex;flex-direction:column;min-width:0}
+.topbar{
+  flex:none;padding:18px 28px 14px;
+  display:flex;align-items:center;gap:16px;
+  background:linear-gradient(var(--paper),rgba(243,242,238,.85));
+}
+.topbar h1{font-size:24px;font-weight:800;letter-spacing:-.03em}
+.topbar .sub{font-size:13px;color:var(--muted);margin-top:1px;font-weight:500}
+.spacer{flex:1}
+
+.search{
+  display:flex;align-items:center;gap:9px;
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-full);padding:0 15px;height:42px;
+  min-width:220px;transition:border-color .16s,box-shadow .16s;
+}
+.search:focus-within{border-color:#C9C3B6;box-shadow:0 0 0 4px rgba(26,25,23,.05)}
+.search .ic{color:var(--muted)}
+.search input{border:none;outline:none;background:none;width:100%;font-size:14.5px;font-weight:500}
+.search input::placeholder{color:var(--faint)}
+
+.view{flex:1;overflow-y:auto;padding:6px 28px 40px;scroll-behavior:smooth}
+.view-in{animation:viewIn .4s var(--ease)}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---- Buttons ---- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:42px;padding:0 17px;border-radius:var(--r-sm);
+  font-weight:600;font-size:14px;letter-spacing:-.01em;
+  transition:transform .12s var(--ease),background .16s,box-shadow .16s,border-color .16s;
+  white-space:nowrap;border:1px solid transparent;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:#1A1917;color:#F7F6F3;box-shadow:var(--sh-1)}
+.btn-primary:hover{background:#2C2A26}
+.btn-ghost{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.btn-ghost:hover{border-color:#D3CEC3;background:var(--surface-2)}
+.btn-soft{background:var(--surface-2);color:var(--ink-2)}
+.btn-soft:hover{background:#F1EFE9}
+.btn-danger{background:var(--danger-bg);color:var(--danger-t)}
+.btn-danger:hover{background:#F8DAD5}
+.btn .ic{width:18px;height:18px}
+.btn-sm{height:36px;padding:0 13px;font-size:13.5px;border-radius:var(--r-xs)}
+.btn-icon{width:42px;padding:0;flex:none}
+.btn-icon.btn-sm{width:36px}
+.btn-block{width:100%}
+
+/* ---- Cards / layout ---- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1)}
+.grid{display:grid;gap:16px}
+.section-h{display:flex;align-items:center;gap:12px;margin:26px 0 14px}
+.section-h h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.section-h .line{flex:1;height:1px;background:var(--line)}
+.section-h .count{font-size:12.5px;color:var(--muted);font-weight:600}
+
+/* ---- KPI ---- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:17px 18px;box-shadow:var(--sh-1);position:relative;overflow:hidden}
+.kpi .kt{font-size:12.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:7px}
+.kpi .kt .ic{width:15px;height:15px}
+.kpi .kv{font-size:29px;font-weight:800;letter-spacing:-.035em;margin-top:9px;line-height:1}
+.kpi .ku{font-size:13px;color:var(--faint);font-weight:600;margin-top:5px}
+.kpi.accent-warn .kv{color:var(--warn-t)} .kpi.accent-danger .kv{color:var(--danger-t)}
+
+/* ---- Material row ---- */
+.mlist{display:flex;flex-direction:column}
+.mrow{
+  display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;
+  padding:14px 18px;border-bottom:1px solid var(--line-2);
+  transition:background .14s;
+}
+.mrow:last-child{border-bottom:none}
+.mrow:hover{background:var(--surface-2)}
+.mrow .mmain{min-width:0;display:flex;align-items:center;gap:13px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 0 3px rgba(0,0,0,.03)}
+.dot.ok{background:var(--ok)} .dot.low{background:var(--warn);animation:pulse 1.8s infinite} .dot.out{background:var(--danger);animation:pulse 1.1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 0 5px rgba(0,0,0,.04)}}
+.mname{font-weight:600;font-size:14.5px;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mmeta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mcode{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);padding:1px 6px;border-radius:5px}
+.mqty{text-align:right;font-variant-numeric:tabular-nums}
+.mqty .q{font-size:18px;font-weight:700;letter-spacing:-.02em}
+.mqty .u{font-size:12px;color:var(--muted);font-weight:600;margin-left:3px}
+.mqty.low .q{color:var(--warn-t)} .mqty.out .q{color:var(--danger-t)}
+.mrow .macts{display:flex;gap:6px;align-items:center}
+
+.pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:var(--r-full);font-size:11.5px;font-weight:700;letter-spacing:.01em}
+.pill.ok{background:var(--ok-bg);color:var(--ok-t)}
+.pill.low{background:var(--warn-bg);color:var(--warn-t)}
+.pill.out{background:var(--danger-bg);color:var(--danger-t)}
+.pill.neutral{background:var(--surface-2);color:var(--muted);border:1px solid var(--line-2)}
+.pill.in{background:var(--ok-bg);color:var(--ok-t)}
+.pill.consume{background:var(--info-bg);color:var(--info)}
+
+/* filter chips */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  height:34px;padding:0 14px;border-radius:var(--r-full);
+  background:var(--surface);border:1px solid var(--line);
+  font-size:13px;font-weight:600;color:var(--ink-2);
+  display:inline-flex;align-items:center;gap:7px;transition:.15s;
+}
+.chip:hover{border-color:#D3CEC3}
+.chip.on{background:#1A1917;color:#F7F6F3;border-color:#1A1917}
+.chip .cnt{font-variant-numeric:tabular-nums;opacity:.6;font-weight:700}
+.chip.on .cnt{opacity:.8}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+
+/* ---- Lamela cards ---- */
+.lamgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.lamcard{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:20px;box-shadow:var(--sh-1);text-align:left;
+  transition:transform .16s var(--ease),box-shadow .16s,border-color .16s;position:relative;overflow:hidden;
+}
+.lamcard:hover{transform:translateY(-3px);box-shadow:var(--sh-2);border-color:#DED9CE}
+.lamcard:active{transform:translateY(-1px) scale(.995)}
+.lamcard .lnum{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--faint);letter-spacing:.04em}
+.lamcard .lname{font-size:17px;font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.lamcard .lstat{margin-top:16px;display:flex;justify-content:space-between;align-items:flex-end}
+.lamcard .lval{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.lamcard .lval small{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:0}
+.lamcard .lico{position:absolute;top:16px;right:16px;color:var(--faint)}
+.lamcard .larrow{color:var(--muted);transition:transform .16s var(--ease)}
+.lamcard:hover .larrow{transform:translateX(3px);color:var(--ink)}
+
+/* ---- History ---- */
+.tline{display:flex;flex-direction:column}
+.trow{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:13px 18px;border-bottom:1px solid var(--line-2)}
+.trow:last-child{border-bottom:none}
+.trow:hover{background:var(--surface-2)}
+.tico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+.tico.in{background:var(--ok-bg);color:var(--ok-t)}
+.tico.out{background:var(--info-bg);color:var(--info)}
+.tico.adj{background:var(--surface-2);color:var(--muted)}
+.tinfo{min-width:0}
+.tinfo b{font-weight:600;font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tinfo .tm{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+.tamt{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tamt .ta{font-size:15px;font-weight:700}
+.tamt.in .ta{color:var(--ok-t)} .tamt.out .ta{color:var(--info)}
+.tamt .td{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:1px}
+
+/* ---- Empty ---- */
+.empty{padding:56px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.empty .eic{width:56px;height:56px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line-2);display:grid;place-items:center;color:var(--faint);margin-bottom:8px}
+.empty .eic .ic{width:26px;height:26px}
+.empty h3{font-size:16px;font-weight:700}
+.empty p{color:var(--muted);font-size:13.5px;max-width:340px}
+
+/* ============================ MODAL ============================ */
+.scrim{position:fixed;inset:0;background:rgba(26,25,23,.34);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .28s var(--ease);z-index:60}
+.scrim.show{opacity:1;pointer-events:auto}
+.modal{
+  position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-46%) scale(.97);
+  width:min(560px,calc(100vw - 32px));max-height:88dvh;overflow:hidden;
+  background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--sh-pop);
+  opacity:0;pointer-events:none;transition:opacity .28s var(--ease),transform .34s var(--ease);
+  display:flex;flex-direction:column;
+}
+.modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.mhead{display:flex;align-items:center;gap:12px;padding:20px 22px 14px}
+.mhead h3{font-size:18px;font-weight:800;letter-spacing:-.02em;flex:1}
+.mhead .mclose{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted);transition:.15s}
+.mhead .mclose:hover{background:var(--surface-2);color:var(--ink)}
+.mbody{padding:0 22px 8px;overflow-y:auto}
+.mfoot{padding:16px 22px 20px;display:flex;gap:10px;border-top:1px solid var(--line-2);margin-top:12px}
+.mfoot .btn{flex:1}
+
+/* form */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px;letter-spacing:.01em}
+.field .hint{font-size:11.5px;color:var(--faint);font-weight:500;margin-top:5px}
+.inp{
+  width:100%;height:46px;padding:0 14px;border-radius:var(--r-sm);
+  background:var(--surface-2);border:1px solid var(--line);
+  font-size:15px;font-weight:500;transition:.16s;outline:none;
+}
+textarea.inp{height:auto;padding:12px 14px;resize:vertical;min-height:70px;line-height:1.45}
+.inp:focus{border-color:#B9B3A5;background:var(--surface);box-shadow:0 0 0 4px rgba(26,25,23,.05)}
+.inp::placeholder{color:var(--faint)}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238C877C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:40px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* stepper */
+.stepper{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface-2)}
+.stepper button{width:46px;flex:none;color:var(--ink-2);font-size:20px;font-weight:600;transition:.14s;display:grid;place-items:center}
+.stepper button:hover{background:#F0EEE7;color:var(--ink)}
+.stepper button:active{background:#E9E6DE}
+.stepper input{flex:1;height:46px;text-align:center;border:none;background:none;outline:none;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+
+/* segmented */
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:3px;gap:2px}
+.seg button{padding:8px 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--muted);transition:.15s}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
+
+/* ---- scan zone ---- */
+.scanzone{
+  border:2px dashed var(--line);border-radius:var(--r-lg);padding:30px 24px;text-align:center;
+  background:var(--surface-2);transition:.18s;cursor:pointer;
+}
+.scanzone:hover{border-color:#C9C3B6;background:#F5F3EC}
+.scanzone .sic{width:60px;height:60px;border-radius:16px;background:#1A1917;color:#F7F6F3;display:grid;place-items:center;margin:0 auto 14px;box-shadow:var(--sh-2)}
+.scanzone .sic .ic{width:28px;height:28px}
+.scanzone h4{font-size:16px;font-weight:700}
+.scanzone p{color:var(--muted);font-size:13px;margin-top:4px}
+
+.scanning{padding:32px 20px;text-align:center}
+.scanning .bar{height:4px;background:var(--line-2);border-radius:99px;overflow:hidden;margin:18px auto 0;max-width:260px}
+.scanning .bar i{display:block;height:100%;width:40%;background:#1A1917;border-radius:99px;animation:load 1.3s var(--ease) infinite}
+@keyframes load{0%{margin-left:-40%}100%{margin-left:100%}}
+.spin{width:44px;height:44px;border-radius:50%;border:3px solid var(--line-2);border-top-color:#1A1917;margin:0 auto;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* page collector (multi-page invoice) */
+.pggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pgthumb{position:relative;aspect-ratio:3/4;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
+.pgthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pgthumb button{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;background:rgba(26,25,23,.72);color:#fff;display:grid;place-items:center;backdrop-filter:blur(2px)}
+.pgthumb .pgnum{position:absolute;bottom:5px;left:6px;background:rgba(26,25,23,.72);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px}
+.pgadd{aspect-ratio:3/4;border-radius:var(--r-sm);border:2px dashed var(--line);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);transition:.15s}
+.pgadd:hover{border-color:#C9C3B6;background:#F5F3EC;color:var(--ink-2)}
+.pgadd span{font-size:11.5px;font-weight:700;text-align:center;padding:0 6px}
+
+/* review line */
+.rwrap{border-bottom:1px solid var(--line-2)}
+.rwrap:last-child{border-bottom:none}
+.rwrap.flag{background:var(--warn-bg);border-radius:10px;margin:2px 0}
+.rwrap.flag .rline{border-bottom:none}
+.rhint{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--warn-t);padding:0 8px 8px}
+.rhint .ic{width:13px;height:13px;flex:none}
+.rline{display:grid;grid-template-columns:1fr 78px 58px 74px 30px;gap:7px;align-items:center;padding:9px 0}
+.rline .rinp{height:38px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);padding:0 8px;font-size:13px;font-weight:500;outline:none;width:100%;min-width:0}
+.rline .rinp:focus{border-color:#B9B3A5;background:var(--surface)}
+.rline .rinp.mono{font-family:var(--mono);font-size:11px}
+.rline .rdel{color:var(--faint);display:grid;place-items:center;height:38px;border-radius:8px;transition:.14s}
+.rline .rdel:hover{color:var(--danger);background:var(--danger-bg)}
+.rhead{display:grid;grid-template-columns:1fr 78px 58px 74px 30px;gap:7px;font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding-bottom:6px}
+
+/* cart line (consume/receive manual) */
+.cline{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-2)}
+.cline:last-child{border-bottom:none}
+.cline .cn{flex:1;min-width:0}
+.cline .cn b{font-weight:600;font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cline .cn span{font-size:12px;color:var(--muted)}
+.cline .cstep{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2)}
+.cline .cstep button{width:34px;height:36px;font-size:17px;color:var(--ink-2)}
+.cline .cstep button:hover{background:#EFECE5}
+.cline .cstep input{width:52px;height:36px;text-align:center;border:none;background:none;border-left:1px solid var(--line);border-right:1px solid var(--line);font-weight:700;font-variant-numeric:tabular-nums;outline:none}
+
+/* picker list inside modal */
+.picklist{max-height:230px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin-top:6px}
+.pickitem{display:flex;align-items:center;gap:11px;padding:11px 13px;border-bottom:1px solid var(--line-2);transition:.12s;text-align:left;width:100%}
+.pickitem:last-child{border-bottom:none}
+.pickitem:hover{background:var(--surface-2)}
+.pickitem .pn{flex:1;min-width:0}
+.pickitem .pn b{font-weight:600;font-size:14px;display:block}
+.pickitem .pn span{font-size:12px;color:var(--muted)}
+.pickitem .pq{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+
+/* ---- toast ---- */
+.toasts{position:fixed;bottom:calc(20px + var(--safe-b));left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none}
+.toast{
+  display:flex;align-items:center;gap:11px;background:#1A1917;color:#F7F6F3;
+  padding:12px 18px;border-radius:var(--r-full);box-shadow:var(--sh-pop);
+  font-size:14px;font-weight:600;animation:toastIn .34s var(--ease);max-width:90vw;
+}
+.toast .ic{width:18px;height:18px}
+.toast.ok .ic{color:#7BE0A0} .toast.bad .ic{color:#FF9B8E}
+.toast-undo{display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:6px 12px;border-radius:var(--r-full);background:rgba(255,255,255,.14);color:#fff;font-weight:700;font-size:13px;pointer-events:auto;transition:background .15s}
+.toast-undo:hover{background:rgba(255,255,255,.24)}
+.toast-undo .ic{color:#fff!important}
+.toasts{pointer-events:none}
+.toast{pointer-events:auto}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+.toast.out{animation:toastOut .3s var(--ease) forwards}
+@keyframes toastOut{to{opacity:0;transform:translateY(10px) scale(.96)}}
+
+/* ---- mobile bottom nav ---- */
+.mobnav{display:none}
+
+/* loading splash */
+.splash{position:fixed;inset:0;background:var(--paper);display:grid;place-items:center;z-index:100;transition:opacity .4s}
+.splash.hide{opacity:0;pointer-events:none}
+.splash .sp-mark{width:56px;height:56px;border-radius:16px;background:linear-gradient(150deg,#26241F,#1A1917);display:grid;place-items:center;color:#F3F2EE;animation:pop .5s var(--ease);box-shadow:var(--sh-2)}
+.splash .sp-mark svg{width:28px;height:28px;stroke-width:2}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* value big number in lamela header */
+.lamhead{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.lamhead .back{width:42px;height:42px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--ink-2);transition:.15s}
+.lamhead .back:hover{background:var(--surface-2);border-color:#D3CEC3}
+
+.mini-kpi{display:flex;gap:22px;flex-wrap:wrap}
+.mini-kpi .mk b{font-size:20px;font-weight:800;letter-spacing:-.03em;display:block}
+.mini-kpi .mk span{font-size:12px;color:var(--muted);font-weight:600}
+
+/* order row */
+.orow{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line-2)}
+.orow:last-child{border-bottom:none}
+.orow:hover{background:var(--surface-2)}
+
+.hidden{display:none!important}
+
+/* ============================ RESPONSIVE ============================ */
+@media(max-width:860px){
+  .nav{display:none}
+  .main{height:100dvh}
+  .topbar{padding:16px 18px 12px}
+  .topbar h1{font-size:21px}
+  .view{padding:4px 18px calc(96px + var(--safe-b))}
+  .kpis{grid-template-columns:1fr 1fr;gap:12px}
+  .lamgrid{grid-template-columns:1fr 1fr;gap:12px}
+  .search{min-width:0}
+
+  .mobnav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:50;
+    background:rgba(255,255,255,.86);backdrop-filter:blur(18px) saturate(1.4);
+    border-top:1px solid var(--line);
+    padding:8px 6px calc(8px + var(--safe-b));justify-content:space-around;align-items:stretch;
+  }
+  .mobnav button{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:5px 2px;border-radius:12px;color:var(--muted);position:relative;transition:.15s;
+  }
+  .mobnav button .ic{width:23px;height:23px;stroke-width:1.9;transition:.15s}
+  .mobnav button span{font-size:10.5px;font-weight:700;letter-spacing:.01em}
+  .mobnav button.on{color:var(--ink)}
+  .mobnav button.on .ic{stroke-width:2.2}
+  .mobnav .mb-badge{position:absolute;top:0;right:calc(50% - 22px);min-width:16px;height:16px;font-size:10px;padding:0 4px;border-radius:99px;background:var(--danger);color:#fff;display:grid;place-items:center;font-weight:700}
+
+  .modal{
+    left:0;right:0;top:auto;bottom:0;transform:translateY(100%);
+    width:100%;max-width:100%;max-height:92dvh;
+    border-radius:var(--r-xl) var(--r-xl) 0 0;
+  }
+  .modal.show{transform:translateY(0)}
+  .mfoot{padding-bottom:calc(20px + var(--safe-b))}
+  .lamgrid{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .row2,.row3{grid-template-columns:1fr}
+  .rline,.rhead{grid-template-columns:1fr 62px 48px 60px 26px;gap:5px}
+  .mrow{grid-template-columns:1fr auto;gap:10px}
+  .mrow .macts{grid-column:1/-1;justify-content:flex-end;margin-top:-2px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.05ms!important}
+}
+</style>
+
+<div class="splash" id="splash">
+  <div class="sp-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21V12h6v9"/></svg></div>
+</div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="nav">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21V12h6v9"/></svg></div>
+      <div class="brand-txt"><b>Магацин</b><span>Градежни материјали</span></div>
+    </div>
+    <nav class="nav-scroll" id="navScroll"></nav>
+    <div class="nav-foot">
+      <button class="nav-item" data-nav="settings">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Поставки</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="pageTitle">Преглед</h1>
+        <div class="sub" id="pageSub">Моментална состојба на магацинот</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="search" id="topSearch">
+        <svg class="ic ic-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="searchInput" placeholder="Пребарај материјал…" autocomplete="off">
+      </div>
+    </header>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+
+<!-- MOBILE NAV -->
+<nav class="mobnav" id="mobnav"></nav>
+
+<!-- MODAL HOST -->
+<div class="scrim" id="scrim"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+
+<!-- TOASTS -->
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* =======================================================================
+   ДАТА СЛОЈ
+======================================================================= */
+const STORE_KEY='gm_magacin_v1';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const now=()=>Date.now();
+
+let S={ materials:[], txns:[], orders:[], lamele:[], settings:{currency:'ден.', seeded:false} };
+
+const DEFAULT_LAMELE=[
+  {id:'L1',name:'Ламела 1'},{id:'L2',name:'Ламела 2'},{id:'L3',name:'Ламела 3'},
+  {id:'L4',name:'Ламела 4'},{id:'L5',name:'Ламела 5'},{id:'L6',name:'Ламела 6'}
+];
+
+function seed(){
+  S.lamele=JSON.parse(JSON.stringify(DEFAULT_LAMELE));
+  S.materials=[];
+  S.txns=[];
+  S.orders=[];
+  S.settings={currency:'ден.', seeded:true, aiProxyUrl:''};
+}
+
+let saveTimer=null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    try{ await window.storage.set(STORE_KEY, JSON.stringify(S)); }
+    catch(e){ console.error('save',e); }
+  },220);
+}
+async function load(){
+  try{
+    const r=await window.storage.get(STORE_KEY);
+    if(r&&r.value){ S=JSON.parse(r.value); }
+    else { seed(); await window.storage.set(STORE_KEY,JSON.stringify(S)); }
+  }catch(e){ seed(); }
+  if(!S.lamele||!S.lamele.length) S.lamele=JSON.parse(JSON.stringify(DEFAULT_LAMELE));
+  if(!S.settings) S.settings={currency:'ден.',seeded:true,aiProxyUrl:''};
+  if(S.settings.aiProxyUrl==null) S.settings.aiProxyUrl='';
+}
+
+/* helpers */
+const cur=()=>S.settings.currency||'ден.';
+const fmt=n=>{ n=Number(n)||0; return n.toLocaleString('mk-MK',{maximumFractionDigits:2}); };
+const money=n=>fmt(n)+' '+cur();
+function statusOf(mat){ if(mat.qty<=0)return'out'; if(mat.min>0&&mat.qty<=mat.min)return'low'; return'ok'; }
+const matById=id=>S.materials.find(m=>m.id===id);
+const lamById=id=>S.lamele.find(l=>l.id===id);
+function stockValue(){ return S.materials.reduce((s,m)=>s+m.qty*m.price,0); }
+function lowCount(){ return S.materials.filter(m=>statusOf(m)==='low').length; }
+function outCount(){ return S.materials.filter(m=>statusOf(m)==='out').length; }
+function alertCount(){ return lowCount()+outCount(); }
+
+function timeAgo(ts){
+  const s=Math.floor((now()-ts)/1000);
+  if(s<60)return'сега'; const mn=Math.floor(s/60); if(mn<60)return`пред ${mn} мин`;
+  const h=Math.floor(mn/60); if(h<24)return`пред ${h} ч`;
+  const d=Math.floor(h/24); if(d===1)return'вчера'; if(d<7)return`пред ${d} дена`;
+  return new Date(ts).toLocaleDateString('mk-MK',{day:'2-digit',month:'2-digit',year:'2-digit'});
+}
+function dateStr(ts){ return new Date(ts).toLocaleDateString('mk-MK',{day:'2-digit',month:'short',year:'numeric'}); }
+function tsToDateInput(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function dateToTs(d){
+  if(!d)return now();
+  const t=new Date(d+'T00:00:00'); if(isNaN(t))return now();
+  if(t.toDateString()===new Date().toDateString())return now();
+  t.setHours(12,0,0,0); return t.getTime();
+}
+/* сите фирми/добавувачи што веќе се користени (за предлози) */
+function knownFirms(){ return [...new Set(S.txns.map(t=>t.firma).filter(Boolean))]; }
+function knownSuppliers(){ return [...new Set(S.txns.map(t=>t.supplier).filter(Boolean))]; }
+
+/* transaction engine */
+function applyIn(matId,qty,{supplier,note,source,price,date}={}){
+  const m=matById(matId); if(!m)return null; qty=Number(qty)||0; if(qty<=0)return null;
+  m.qty=+(m.qty+qty).toFixed(3);
+  if(price!=null&&price!=='') m.price=Number(price);
+  const id=uid();
+  S.txns.unshift({id,type:'in',matId,matName:m.name,unit:m.unit,qty,price:m.price,lamela:null,supplier:supplier||'',firma:'',note:note||'',source:source||'manual',ts:date?dateToTs(date):now()});
+  return id;
+}
+function applyOut(matId,qty,lamela,{note,firma,date}={}){
+  const m=matById(matId); if(!m)return null; qty=Number(qty)||0; if(qty<=0)return null;
+  m.qty=+(m.qty-qty).toFixed(3); if(m.qty<0)m.qty=0;
+  const id=uid();
+  S.txns.unshift({id,type:'out',matId,matName:m.name,unit:m.unit,qty,price:m.price,lamela,supplier:'',firma:firma||'',note:note||'',source:'manual',ts:date?dateToTs(date):now()});
+  return id;
+}
+function reverseTxn(t){
+  const m=matById(t.matId);
+  if(m){ if(t.type==='in')m.qty=Math.max(0,+(m.qty-t.qty).toFixed(3)); else m.qty=+(m.qty+t.qty).toFixed(3); }
+  S.txns=S.txns.filter(x=>x.id!==t.id);
+}
+/* Врати цела група движења (и по потреба избриши артикли создадени во таа група кои останале празни) */
+function undoBatch(txnIds,createdMatIds){
+  (txnIds||[]).forEach(id=>{ const t=S.txns.find(x=>x.id===id); if(t)reverseTxn(t); });
+  (createdMatIds||[]).forEach(mid=>{
+    const hasTxns=S.txns.some(t=>t.matId===mid);
+    const m=matById(mid);
+    if(m && !hasTxns && m.qty<=0) S.materials=S.materials.filter(x=>x.id!==mid);
+  });
+  save(); render(); buildNav();
+}
+
+/* =======================================================================
+   ИКОНИ
+======================================================================= */
+const I={
+  grid:'<path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>',
+  box:'<path d="M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>',
+  truck:'<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  down:'<path d="M12 3v14M6 11l6 6 6-6"/><path d="M4 21h16"/>',
+  layers:'<path d="M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  cart:'<circle cx="9" cy="21" r="1.4"/><circle cx="18" cy="21" r="1.4"/><path d="M2 3h3l2.5 13h11l2-9H6.5"/>',
+  cam:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  minus:'<path d="M5 12h14"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  edit:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  trash:'<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  check:'<path d="M20 6L9 17l-5-5"/>',
+  x:'<path d="M18 6L6 18M6 6l12 12"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  back:'<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  alert:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
+  building:'<path d="M4 22V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v18"/><path d="M15 9h4a1 1 0 0 1 1 1v12M8 7h.01M11 7h.01M8 11h.01M11 11h.01M8 15h.01M11 15h.01"/>',
+  spark:'<path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+  undo:'<path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/>',
+};
+const svg=(p,cls='ic')=>`<svg class="${cls}" viewBox="0 0 24 24">${p}</svg>`;
+
+/* =======================================================================
+   НАВИГАЦИЈА
+======================================================================= */
+const NAV=[
+  {id:'dashboard',label:'Преглед',sub:'Моментална состојба на магацинот',icon:I.grid,group:'Магацин',mob:true},
+  {id:'materials',label:'Материјали',sub:'Залиха и артикли',icon:I.box,group:'Магацин',mob:true},
+  {id:'receive',label:'Приеми',sub:'Прием на материјал во магацин',icon:I.down,group:'Движења',mob:true},
+  {id:'consume',label:'Потрошувачка',sub:'Издавање материјал по ламела',icon:I.truck,group:'Движења',mob:true},
+  {id:'orders',label:'Нарачки',sub:'Нарачки кон добавувачи',icon:I.cart,group:'Движења'},
+  {id:'lamele',label:'Ламели',sub:'6 објекти — потрошувачка по ламела',icon:I.layers,group:'Објекти'},
+  {id:'history',label:'Историја',sub:'Сите влезови и излези',icon:I.clock,group:'Објекти'},
+];
+let VIEW='dashboard', SUBLAMELA=null, SEARCH='', MFILTER='all';
+
+function buildNav(){
+  const groups={};
+  NAV.forEach(n=>{ (groups[n.group]=groups[n.group]||[]).push(n); });
+  let h='';
+  Object.entries(groups).forEach(([g,items])=>{
+    h+=`<div class="nav-label">${g}</div>`;
+    items.forEach(n=>{
+      const badge = n.id==='materials'&&alertCount()?`<span class="badge ${outCount()?'':'warn'}">${alertCount()}</span>`:'';
+      h+=`<button class="nav-item ${VIEW===n.id?'on':''}" data-nav="${n.id}">${svg(n.icon)}<span>${n.label}</span>${badge}</button>`;
+    });
+  });
+  document.getElementById('navScroll').innerHTML=h;
+
+  // mobile
+  const mob=NAV.filter(n=>n.mob);
+  let mh=mob.map(n=>{
+    const b=n.id==='materials'&&alertCount()?`<span class="mb-badge">${alertCount()}</span>`:'';
+    return `<button data-nav="${n.id}" class="${VIEW===n.id?'on':''}">${svg(n.icon)}<span>${n.label}</span>${b}</button>`;
+  }).join('');
+  const moreOn=['orders','lamele','history','settings'].includes(VIEW)?'on':'';
+  mh+=`<button data-nav="__more" class="${moreOn}">${svg('<path d="M4 12h16M4 6h16M4 18h16"/>')}<span>Повеќе</span></button>`;
+  document.getElementById('mobnav').innerHTML=mh;
+}
+
+function go(v,opts={}){
+  if(v==='__more'){ openMore(); return; }
+  VIEW=v; SUBLAMELA=opts.lamela||null;
+  const meta=NAV.find(n=>n.id===v)||{label:'Поставки',sub:'Прилагоди ја апликацијата'};
+  document.getElementById('pageTitle').textContent = opts.title||meta.label;
+  document.getElementById('pageSub').textContent = opts.sub||meta.sub;
+  document.getElementById('topSearch').style.display = (v==='materials'||v==='history')?'flex':'none';
+  buildNav();
+  render();
+  document.getElementById('view').scrollTop=0;
+}
+
+document.addEventListener('click',e=>{
+  const nav=e.target.closest('[data-nav]');
+  if(nav){ go(nav.dataset.nav); }
+});
+document.getElementById('searchInput').addEventListener('input',e=>{ SEARCH=e.target.value.trim().toLowerCase(); render(); });
+
+/* =======================================================================
+   RENDER
+======================================================================= */
+const V=document.getElementById('view');
+function render(){
+  let html='';
+  switch(VIEW){
+    case'dashboard':html=viewDashboard();break;
+    case'materials':html=viewMaterials();break;
+    case'receive':html=viewReceive();break;
+    case'consume':html=viewConsume();break;
+    case'orders':html=viewOrders();break;
+    case'lamele':html=SUBLAMELA?viewLamela(SUBLAMELA):viewLamele();break;
+    case'history':html=viewHistory();break;
+    case'settings':html=viewSettings();break;
+  }
+  V.innerHTML=`<div class="view-in">${html}</div>`;
+}
+
+/* ---------- DASHBOARD ---------- */
+function viewDashboard(){
+  const total=S.materials.length, val=stockValue(), low=lowCount(), out=outCount();
+  const alerts=S.materials.filter(m=>statusOf(m)!=='ok').sort((a,b)=>statusOf(a)==='out'?-1:1).slice(0,6);
+  const recent=S.txns.slice(0,6);
+
+  let kpi=`<div class="kpis">
+    <div class="kpi"><div class="kt">${svg(I.box,'ic')}Артикли</div><div class="kv num">${total}</div><div class="ku">во магацин</div></div>
+    <div class="kpi"><div class="kt">${svg(I.chart,'ic')}Вредност</div><div class="kv num" style="font-size:24px">${fmt(val)}</div><div class="ku">${cur()} вкупна залиха</div></div>
+    <div class="kpi ${low?'accent-warn':''}"><div class="kt">${svg(I.alert,'ic')}Ниска залиха</div><div class="kv num">${low}</div><div class="ku">артикли при крај</div></div>
+    <div class="kpi ${out?'accent-danger':''}"><div class="kt">${svg(I.alert,'ic')}Снема</div><div class="kv num">${out}</div><div class="ku">потрошени артикли</div></div>
+  </div>`;
+
+  let quick=`<div class="section-h"><h2>Брзи дејства</h2><div class="line"></div></div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+    <button class="card" data-act="manual-receive" style="padding:18px;display:flex;align-items:center;gap:14px;text-align:left">
+      <div class="tico in" style="width:42px;height:42px">${svg(I.down,'ic')}</div>
+      <div><b style="font-weight:700;font-size:14.5px">Брз прием</b><div style="font-size:12.5px;color:var(--muted)">Внеси фактура за секунди</div></div>
+    </button>
+    <button class="card" data-nav="consume" style="padding:18px;display:flex;align-items:center;gap:14px;text-align:left">
+      <div class="tico out" style="width:42px;height:42px">${svg(I.truck,'ic')}</div>
+      <div><b style="font-weight:700;font-size:14.5px">Потрошувачка</b><div style="font-size:12.5px;color:var(--muted)">Издај по ламела</div></div>
+    </button>
+    <button class="card" data-act="add-material" style="padding:18px;display:flex;align-items:center;gap:14px;text-align:left">
+      <div class="tico adj" style="width:42px;height:42px">${svg(I.plus,'ic')}</div>
+      <div><b style="font-weight:700;font-size:14.5px">Нов артикл</b><div style="font-size:12.5px;color:var(--muted)">Додај материјал</div></div>
+    </button>
+  </div>`;
+
+  let alertBox=`<div class="section-h"><h2>Предупредувања за залиха</h2><div class="line"></div>${alerts.length?`<span class="count">${alerts.length}</span>`:''}</div>`;
+  if(!alerts.length){
+    alertBox+=`<div class="card empty"><div class="eic">${svg(I.check)}</div><h3>Сѐ е во ред</h3><p>Ниту еден артикл не е под минималната залиха.</p></div>`;
+  }else{
+    alertBox+=`<div class="card mlist">`+alerts.map(m=>materialRow(m,{compact:true})).join('')+`</div>`;
+  }
+
+  let act=`<div class="section-h"><h2>Последни движења</h2><div class="line"></div><button class="count" data-nav="history" style="color:var(--info)">Сите →</button></div>`;
+  act+= recent.length?`<div class="card tline">`+recent.map(txnRow).join('')+`</div>`
+    :`<div class="card empty"><div class="eic">${svg(I.clock)}</div><h3>Нема движења</h3><p>Приемите и потрошувачката ќе се појават тука.</p></div>`;
+
+  return kpi+quick+`<div style="height:6px"></div>`+alertBox+act;
+}
+
+/* ---------- MATERIALS ---------- */
+function materialRow(m,{compact=false}={}){
+  const st=statusOf(m);
+  const stTxt=st==='out'?'Снема':st==='low'?'Ниска':'Во залиха';
+  return `<div class="mrow" data-mrow="${m.id}">
+    <div class="mmain">
+      <span class="dot ${st}" title="${stTxt}"></span>
+      <div style="min-width:0">
+        <div class="mname">${esc(m.name)}</div>
+        <div class="mmeta"><span class="mcode">${esc(m.code||'—')}</span><span>${money(m.price)} / ${esc(m.unit)}</span>${!compact?`<span>· вредност ${money(m.qty*m.price)}</span>`:''}</div>
+      </div>
+    </div>
+    <div class="mqty ${st==='out'?'out':st==='low'?'low':''}"><span class="q num">${fmt(m.qty)}</span><span class="u">${esc(m.unit)}</span>${st!=='ok'?`<div style="margin-top:3px"><span class="pill ${st}">${stTxt}</span></div>`:''}</div>
+    <div class="macts">
+      <button class="btn btn-soft btn-icon btn-sm" data-act="quick-in" data-id="${m.id}" title="Прием">${svg(I.plus,'ic ic-sm')}</button>
+      <button class="btn btn-soft btn-icon btn-sm" data-act="quick-out" data-id="${m.id}" title="Потрошувачка">${svg(I.minus,'ic ic-sm')}</button>
+      <button class="btn btn-soft btn-icon btn-sm" data-act="edit-material" data-id="${m.id}" title="Уреди">${svg(I.edit,'ic ic-sm')}</button>
+    </div>
+  </div>`;
+}
+function viewMaterials(){
+  const all=S.materials;
+  const list=all.filter(m=>{
+    if(MFILTER==='low'&&statusOf(m)!=='low')return false;
+    if(MFILTER==='out'&&statusOf(m)!=='out')return false;
+    if(MFILTER==='ok'&&statusOf(m)!=='ok')return false;
+    if(SEARCH){ const s=(m.name+' '+(m.code||'')).toLowerCase(); if(!s.includes(SEARCH))return false; }
+    return true;
+  }).sort((a,b)=>a.name.localeCompare(b.name,'mk'));
+
+  const chip=(id,label,cnt)=>`<button class="chip ${MFILTER===id?'on':''}" data-filter="${id}">${label}${cnt!=null?`<span class="cnt num">${cnt}</span>`:''}</button>`;
+  let bar=`<div class="toolbar">
+    <div class="chips">
+      ${chip('all','Сите',all.length)}
+      ${chip('low','Ниска',lowCount())}
+      ${chip('out','Снема',outCount())}
+      ${chip('ok','Во залиха',all.filter(m=>statusOf(m)==='ok').length)}
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-sm" data-act="add-material">${svg(I.plus,'ic ic-sm')}Нов артикл</button>
+  </div>`;
+
+  let body;
+  if(!list.length){
+    body=`<div class="card empty"><div class="eic">${svg(I.box)}</div><h3>${SEARCH?'Нема резултат':'Нема артикли'}</h3><p>${SEARCH?'Пробај друг поим за пребарување.':'Додај материјал или скенирај фактура за автоматски прием.'}</p></div>`;
+  }else{
+    body=`<div class="card mlist">`+list.map(m=>materialRow(m)).join('')+`</div>`;
+  }
+  return bar+body;
+}
+
+/* ---------- RECEIVE ---------- */
+let manualReceive=[]; // {matId, qty}
+function viewReceive(){
+  const recent=S.txns.filter(t=>t.type==='in').slice(0,8);
+  let scan=`<div class="grid" style="grid-template-columns:1.15fr 1fr;gap:16px">
+    <div class="card" style="padding:20px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px"><div class="tico in">${svg(I.cam,'ic')}</div><div><b style="font-weight:700">Скенирај фактура</b><div style="font-size:12.5px;color:var(--muted)">Камерата ги чита артикл, шифра и цена</div></div></div>
+      <label class="scanzone" id="scanZone">
+        <input type="file" accept="image/*" capture="environment" id="invFile" class="hidden">
+        <div class="sic">${svg(I.cam,'ic')}</div>
+        <h4>Сликај или прикачи фактура</h4>
+        <p>Чита артикли, шифри и цени · работи и офлајн</p>
+      </label>
+    </div>
+    <div class="card" style="padding:20px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px"><div class="tico adj">${svg(I.edit,'ic')}</div><div><b style="font-weight:700">Рачен прием</b><div style="font-size:12.5px;color:var(--muted)">Внеси материјал директно</div></div></div>
+      <button class="btn btn-ghost btn-block" data-act="manual-receive">${svg(I.plus,'ic ic-sm')}Внеси прием рачно</button>
+      <div class="hint" style="margin-top:12px;font-size:12px;color:var(--muted)">Приемот автоматски ја зголемува моменталната залиха и се запишува во историјата.</div>
+    </div>
+  </div>`;
+
+  let hist=`<div class="section-h"><h2>Последни приеми</h2><div class="line"></div></div>`;
+  hist+= recent.length?`<div class="card tline">`+recent.map(txnRow).join('')+`</div>`
+    :`<div class="card empty"><div class="eic">${svg(I.down)}</div><h3>Нема приеми</h3><p>Скенирај фактура или внеси прием рачно.</p></div>`;
+  return scan+hist;
+}
+
+/* ---------- CONSUME ---------- */
+function viewConsume(){
+  let cards=`<div class="section-h"><h2>Издавање материјал</h2><div class="line"></div></div>
+  <div class="card" style="padding:20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div class="tico out">${svg(I.truck,'ic')}</div>
+    <div style="flex:1;min-width:180px"><b style="font-weight:700">Нова потрошувачка</b><div style="font-size:12.5px;color:var(--muted)">Избери ламела и материјали — залихата се намалува автоматски</div></div>
+    <button class="btn btn-primary" data-act="new-consume">${svg(I.plus,'ic ic-sm')}Издај материјал</button>
+  </div>`;
+
+  // per-lamela consumption summary
+  let per=`<div class="section-h"><h2>Потрошувачка по ламела</h2><div class="line"></div></div><div class="lamgrid">`;
+  S.lamele.forEach(l=>{
+    const tx=S.txns.filter(t=>t.type==='out'&&t.lamela===l.id);
+    const val=tx.reduce((s,t)=>s+t.qty*t.price,0);
+    per+=`<button class="lamcard" data-lamela="${l.id}">
+      <div class="lico">${svg(I.building,'ic')}</div>
+      <div class="lnum">${l.id}</div><div class="lname">${esc(l.name)}</div>
+      <div class="lstat"><div class="lval num">${fmt(val)} <small>${cur()}</small></div><span class="larrow">${svg(I.arrow,'ic ic-sm')}</span></div>
+    </button>`;
+  });
+  per+=`</div>`;
+
+  const recent=S.txns.filter(t=>t.type==='out').slice(0,6);
+  let hist=`<div class="section-h"><h2>Последна потрошувачка</h2><div class="line"></div></div>`;
+  hist+= recent.length?`<div class="card tline">`+recent.map(txnRow).join('')+`</div>`
+    :`<div class="card empty"><div class="eic">${svg(I.truck)}</div><h3>Нема потрошувачка</h3><p>Издадениот материјал ќе се појави тука.</p></div>`;
+  return cards+per+hist;
+}
+
+/* ---------- ORDERS ---------- */
+function viewOrders(){
+  const active=S.orders.filter(o=>o.status==='ordered');
+  const done=S.orders.filter(o=>o.status==='received');
+  let bar=`<div class="toolbar"><div><b style="font-weight:700;font-size:15px">Нарачки кон добавувачи</b><div style="font-size:12.5px;color:var(--muted)">Означи как пристигнати за автоматски прием во магацин</div></div><div class="spacer"></div><button class="btn btn-primary btn-sm" data-act="new-order">${svg(I.plus,'ic ic-sm')}Нова нарачка</button></div>`;
+
+  function orderRow(o){
+    return `<div class="orow">
+      <div style="min-width:0">
+        <div class="mname">${esc(o.matName)}</div>
+        <div class="mmeta"><span class="mcode">${esc(o.code||'—')}</span><span>${esc(o.supplier||'—')}</span><span>· ${dateStr(o.ts)}</span></div>
+      </div>
+      <div class="mqty"><span class="q num">${fmt(o.qty)}</span><span class="u">${esc(o.unit)}</span></div>
+      <div class="macts">
+        ${o.status==='ordered'
+          ?`<button class="btn btn-primary btn-sm" data-act="receive-order" data-id="${o.id}">${svg(I.check,'ic ic-sm')}Пристигна</button>
+            <button class="btn btn-soft btn-icon btn-sm" data-act="del-order" data-id="${o.id}">${svg(I.trash,'ic ic-sm')}</button>`
+          :`<span class="pill in">${svg(I.check,'ic ic-sm')}Примено</span>`}
+      </div>
+    </div>`;
+  }
+
+  let body='';
+  if(!S.orders.length){
+    body=`<div class="card empty"><div class="eic">${svg(I.cart)}</div><h3>Нема нарачки</h3><p>Креирај нарачка кон добавувач и следи ја до прием.</p></div>`;
+  }else{
+    if(active.length) body+=`<div class="section-h"><h2>Активни</h2><div class="line"></div><span class="count">${active.length}</span></div><div class="card">`+active.map(orderRow).join('')+`</div>`;
+    if(done.length) body+=`<div class="section-h"><h2>Примени</h2><div class="line"></div></div><div class="card" style="opacity:.75">`+done.slice(0,10).map(orderRow).join('')+`</div>`;
+  }
+  return bar+body;
+}
+
+/* ---------- LAMELE ---------- */
+function viewLamele(){
+  let h=`<div class="lamgrid">`;
+  S.lamele.forEach(l=>{
+    const tx=S.txns.filter(t=>t.type==='out'&&t.lamela===l.id);
+    const val=tx.reduce((s,t)=>s+t.qty*t.price,0);
+    const items=new Set(tx.map(t=>t.matId)).size;
+    h+=`<button class="lamcard" data-lamela="${l.id}">
+      <div class="lico">${svg(I.building,'ic')}</div>
+      <div class="lnum">${l.id}</div><div class="lname">${esc(l.name)}</div>
+      <div class="lstat">
+        <div><div class="lval num">${fmt(val)} <small>${cur()}</small></div><div style="font-size:12px;color:var(--muted);font-weight:600;margin-top:3px">${items} артикли · ${tx.length} издавања</div></div>
+        <span class="larrow">${svg(I.arrow,'ic ic-sm')}</span>
+      </div>
+    </button>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+function viewLamela(id){
+  const l=lamById(id); if(!l)return viewLamele();
+  const tx=S.txns.filter(t=>t.type==='out'&&t.lamela===id);
+  const val=tx.reduce((s,t)=>s+t.qty*t.price,0);
+  // aggregate per material
+  const agg={};
+  tx.forEach(t=>{ const a=agg[t.matId]=agg[t.matId]||{name:t.matName,unit:t.unit,qty:0,val:0}; a.qty+=t.qty; a.val+=t.qty*t.price; });
+  const rows=Object.values(agg).sort((a,b)=>b.val-a.val);
+  // aggregate per firma
+  const faggAll={}; let noFirmaVal=0;
+  tx.forEach(t=>{ const key=(t.firma||'').trim(); if(!key){ noFirmaVal+=t.qty*t.price; return; } const a=faggAll[key]=faggAll[key]||{name:key,val:0,n:0}; a.val+=t.qty*t.price; a.n++; });
+  const frows=Object.values(faggAll).sort((a,b)=>b.val-a.val);
+
+  let head=`<div class="lamhead">
+    <button class="back" data-nav="lamele">${svg(I.back,'ic')}</button>
+    <div style="flex:1"><div class="lnum" style="font-family:var(--mono);font-size:12px;color:var(--faint)">${l.id}</div><div style="font-size:22px;font-weight:800;letter-spacing:-.03em">${esc(l.name)}</div></div>
+    <button class="btn btn-primary btn-sm" data-act="new-consume" data-lamela="${id}">${svg(I.plus,'ic ic-sm')}Издај</button>
+  </div>
+  <div class="card" style="padding:18px 20px;margin-bottom:6px"><div class="mini-kpi">
+    <div class="mk"><b class="num">${fmt(val)} <span style="font-size:13px;color:var(--muted)">${cur()}</span></b><span>вкупно потрошено</span></div>
+    <div class="mk"><b class="num">${rows.length}</b><span>различни артикли</span></div>
+    <div class="mk"><b class="num">${tx.length}</b><span>издавања</span></div>
+  </div></div>`;
+
+  let byFirma='';
+  if(frows.length){
+    byFirma=`<div class="section-h"><h2>Потрошувачка по фирма / изведувач</h2><div class="line"></div></div>
+    <div class="card mlist">`+frows.map(f=>`<div class="mrow" style="grid-template-columns:1fr auto">
+      <div class="mmain"><span class="dot ok" style="background:var(--ink)"></span><div><div class="mname">${esc(f.name)}</div><div class="mmeta"><span>${f.n} издавања</span></div></div></div>
+      <div class="mqty"><span class="q num">${fmt(f.val)}</span><span class="u">${cur()}</span></div>
+    </div>`).join('')
+    +(noFirmaVal>0?`<div class="mrow" style="grid-template-columns:1fr auto;opacity:.65">
+      <div class="mmain"><span class="dot ok" style="background:var(--faint)"></span><div><div class="mname">Без наведена фирма</div></div></div>
+      <div class="mqty"><span class="q num">${fmt(noFirmaVal)}</span><span class="u">${cur()}</span></div>
+    </div>`:'')
+    +`</div>`;
+  }
+
+  let mat=`<div class="section-h"><h2>Потрошени материјали</h2><div class="line"></div></div>`;
+  if(!rows.length){
+    mat+=`<div class="card empty"><div class="eic">${svg(I.layers)}</div><h3>Нема потрошувачка</h3><p>За оваа ламела сѐ уште нема издаден материјал.</p></div>`;
+  }else{
+    mat+=`<div class="card mlist">`+rows.map(r=>`<div class="mrow">
+      <div class="mmain"><span class="dot ok" style="background:var(--info)"></span><div><div class="mname">${esc(r.name)}</div><div class="mmeta"><span>вредност ${money(r.val)}</span></div></div></div>
+      <div class="mqty"><span class="q num">${fmt(r.qty)}</span><span class="u">${esc(r.unit)}</span></div>
+    </div>`).join('')+`</div>`;
+  }
+
+  let hist=`<div class="section-h"><h2>Историја на издавања</h2><div class="line"></div></div>`;
+  hist+= tx.length?`<div class="card tline">`+tx.slice(0,20).map(txnRow).join('')+`</div>`:'';
+  return head+byFirma+mat+hist;
+}
+
+/* ---------- HISTORY ---------- */
+let HFILTER='all';
+function viewHistory(){
+  let list=S.txns.slice();
+  if(HFILTER==='in')list=list.filter(t=>t.type==='in');
+  if(HFILTER==='out')list=list.filter(t=>t.type==='out');
+  if(SEARCH)list=list.filter(t=>(t.matName+' '+(t.supplier||'')+' '+(t.firma||'')+' '+(t.note||'')).toLowerCase().includes(SEARCH));
+
+  const chip=(id,label)=>`<button class="chip ${HFILTER===id?'on':''}" data-hfilter="${id}">${label}</button>`;
+  let bar=`<div class="toolbar"><div class="chips">${chip('all','Сите')}${chip('in','Приеми')}${chip('out','Потрошувачка')}</div></div>`;
+
+  let body;
+  if(!list.length){
+    body=`<div class="card empty"><div class="eic">${svg(I.clock)}</div><h3>${SEARCH?'Нема резултат':'Нема движења'}</h3><p>${SEARCH?'Пробај друг поим.':'Сите влезови и излези ќе се појават тука.'}</p></div>`;
+  }else{
+    // group by day
+    const groups={};
+    list.forEach(t=>{ const d=new Date(t.ts); const k=d.toLocaleDateString('mk-MK',{day:'2-digit',month:'long',year:'numeric'}); (groups[k]=groups[k]||[]).push(t); });
+    body=Object.entries(groups).map(([day,items])=>
+      `<div class="section-h" style="margin:18px 0 10px"><h2 style="font-size:13px;color:var(--muted);text-transform:capitalize">${day}</h2><div class="line"></div></div><div class="card tline">${items.map(t=>txnRow(t,true)).join('')}</div>`
+    ).join('');
+  }
+  return bar+body;
+}
+function txnRow(t,delable=false){
+  const isIn=t.type==='in';
+  const lam=t.lamela?lamById(t.lamela):null;
+  const meta=[];
+  if(isIn){ if(t.supplier)meta.push(esc(t.supplier)); meta.push(t.source==='invoice'?'фактура':t.source==='order'?'нарачка':'рачно'); }
+  else { if(lam)meta.push(esc(lam.name)); if(t.firma)meta.push('<b style="color:var(--ink-2)">'+esc(t.firma)+'</b>'); }
+  if(t.note)meta.push(esc(t.note));
+  meta.push(timeAgo(t.ts));
+  return `<div class="trow">
+    <div class="tico ${isIn?'in':'out'}">${svg(isIn?I.down:I.truck,'ic ic-sm')}</div>
+    <div class="tinfo"><b>${esc(t.matName)}</b><div class="tm">${meta.map(m=>`<span>${m}</span>`).join('<span style="color:var(--faint)">·</span>')}</div></div>
+    <div class="tamt ${isIn?'in':'out'}"><div class="ta num">${isIn?'+':'−'}${fmt(t.qty)} <span style="font-size:11px;color:var(--muted);font-weight:600">${esc(t.unit)}</span></div><div class="td">${money(t.qty*t.price)}</div></div>
+    ${delable?`<button class="btn btn-soft btn-icon btn-sm" data-act="del-txn" data-id="${t.id}" style="margin-left:8px">${svg(I.trash,'ic ic-sm')}</button>`:''}
+  </div>`;
+}
+
+/* ---------- SETTINGS ---------- */
+function viewSettings(){
+  let lam=S.lamele.map(l=>`<div class="cline"><div class="cn"><span class="mono" style="font-size:11px;color:var(--faint)">${l.id}</span></div><input class="inp" style="height:40px" data-lam="${l.id}" value="${esc(l.name)}"></div>`).join('');
+  const aiUrl=S.settings.aiProxyUrl||'';
+  return `<div style="max-width:640px">
+    <div class="card" style="padding:20px;margin-bottom:16px">
+      <div class="field"><label>Валута</label><input class="inp" id="setCur" value="${esc(cur())}"><div class="hint">Прикажана до сите цени и вредности.</div></div>
+    </div>
+    <div class="section-h"><h2>AI скенирање фактури</h2><div class="line"></div></div>
+    <div class="card" style="padding:20px;margin-bottom:16px">
+      <div class="field">
+        <label>Адреса на AI сервер (Worker URL)</label>
+        <input class="inp mono" id="setAiUrl" value="${esc(aiUrl)}" placeholder="https://magacin-ai.твоеime.workers.dev">
+        <div class="hint">${aiUrl?'Поставено — скенирањето користи вистински AI (најпрецизно).':'Не е поставено — скенирањето работи офлајн, директно на уредот (бесплатно, без клуч). Ако сакаш подобра точност, постави тука адреса на AI сервер.'}</div>
+      </div>
+      <button class="btn btn-soft btn-sm" data-act="test-ai" style="margin-top:2px">${svg(I.spark,'ic ic-sm')}Тестирај врска</button>
+      <div class="hint" style="margin-top:10px">Без поставена адреса, скенирањето користи офлајн препознавање текст директно во апликацијата (Tesseract) — работи без интернет по првото користење, но е помалку прецизно од AI. Секогаш можеш да ги провериш и поправиш ставките пред да ги примиш.</div>
+    </div>
+    <div class="section-h"><h2>Имиња на ламели</h2><div class="line"></div></div>
+    <div class="card" style="padding:16px 20px;margin-bottom:16px">${lam}</div>
+    <button class="btn btn-primary" data-act="save-settings">${svg(I.check,'ic ic-sm')}Зачувај поставки</button>
+    <div class="section-h"><h2>Податоци</h2><div class="line"></div></div>
+    <div class="card" style="padding:20px;display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-ghost" data-act="export">${svg(I.file,'ic ic-sm')}Извези (CSV)</button>
+      <button class="btn btn-danger" data-act="reset">${svg(I.trash,'ic ic-sm')}Ресетирај сѐ</button>
+    </div>
+  </div>`;
+}
+/* тест-повик кон конфигурираниот AI сервер (Worker) за брза проверка дека клучот/адресата се исправни */
+async function testAiProxy(){
+  const url=(document.getElementById('setAiUrl')?.value||S.settings.aiProxyUrl||'').trim();
+  if(!url){ toast('Прво внеси адреса на AI серверот','bad'); return; }
+  toast('Проверувам врска…');
+  try{
+    const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:16,messages:[{role:'user',content:'Одговори само со зборот: ОК'}]})});
+    const data=await resp.json();
+    if(data.error) throw new Error(data.error.message||'error');
+    const txt=(data.content||[]).map(c=>c.type==='text'?c.text:'').join('').trim();
+    if(!txt) throw new Error('empty');
+    toast('Врската работи ✓');
+  }catch(e){
+    console.error(e);
+    toast('Не успеа — провери ја адресата и клучот','bad');
+  }
+}
+
+/* =======================================================================
+   MODAL СИСТЕМ
+======================================================================= */
+const scrim=document.getElementById('scrim'), modalEl=document.getElementById('modal');
+let onModalClose=null;
+function openModal(html,onClose){
+  modalEl.innerHTML=html; onModalClose=onClose||null;
+  scrim.classList.add('show'); modalEl.classList.add('show');
+  const f=modalEl.querySelector('input,select,textarea'); if(f&&window.innerWidth>860)setTimeout(()=>f.focus(),120);
+}
+function closeModal(){
+  scrim.classList.remove('show'); modalEl.classList.remove('show');
+  setTimeout(()=>{ if(!modalEl.classList.contains('show'))modalEl.innerHTML=''; },300);
+  invoicePages=[];
+  if(onModalClose)onModalClose();
+}
+scrim.addEventListener('click',closeModal);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&modalEl.classList.contains('show'))closeModal(); });
+
+function openMore(){
+  const items=[
+    {id:'orders',label:'Нарачки',icon:I.cart,sub:'Нарачки кон добавувачи'},
+    {id:'lamele',label:'Ламели',icon:I.layers,sub:'6 објекти'},
+    {id:'history',label:'Историја',icon:I.clock,sub:'Влезови и излези'},
+    {id:'settings',label:'Поставки',icon:I.spark,sub:'Прилагодувања'},
+  ];
+  openModal(`<div class="mhead"><h3>Повеќе</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+    <div class="mbody" style="padding-bottom:18px"><div class="picklist" style="max-height:none;margin-top:0">
+    ${items.map(i=>`<button class="pickitem" data-more="${i.id}"><div class="tico adj" style="width:38px;height:38px">${svg(i.icon,'ic ic-sm')}</div><div class="pn"><b>${i.label}</b><span>${i.sub}</span></div>${svg(I.arrow,'ic ic-sm')}</button>`).join('')}
+    </div></div>`);
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* =======================================================================
+   ДЕЈСТВА / MODALS
+======================================================================= */
+function materialForm(m){
+  const e=m||{name:'',code:'',unit:'парчиња',price:'',qty:0,min:0};
+  const units=['парчиња','вреќи','кг','тони','м','м²','м³','литри','ролни','пакети','сетови'];
+  return `<div class="mhead"><h3>${m?'Уреди артикл':'Нов артикл'}</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody">
+    <div class="field"><label>Назив на материјал</label><input class="inp" id="f_name" value="${esc(e.name)}" placeholder="пр. Цемент CEM II 42.5"></div>
+    <div class="row2">
+      <div class="field"><label>Шифра / артикл број</label><input class="inp mono" id="f_code" value="${esc(e.code)}" placeholder="CEM-425"></div>
+      <div class="field"><label>Единица мерка</label><select class="inp" id="f_unit">${units.map(u=>`<option ${u===e.unit?'selected':''}>${u}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Цена по единица (${cur()})</label><input class="inp num" id="f_price" type="number" inputmode="decimal" value="${e.price}" placeholder="0"></div>
+      <div class="field"><label>Минимална залиха ⚠︎</label><input class="inp num" id="f_min" type="number" inputmode="decimal" value="${e.min}" placeholder="0"><div class="hint">Предупредување под оваа количина.</div></div>
+    </div>
+    ${!m?`<div class="field"><label>Почетна залиха</label><input class="inp num" id="f_qty" type="number" inputmode="decimal" value="${e.qty}" placeholder="0"></div>`:''}
+  </div>
+  <div class="mfoot">
+    ${m?`<button class="btn btn-danger btn-icon" data-act="del-material" data-id="${m.id}">${svg(I.trash,'ic ic-sm')}</button>`:''}
+    <button class="btn btn-primary" data-act="save-material" data-id="${m?m.id:''}">${svg(I.check,'ic ic-sm')}Зачувај</button>
+  </div>`;
+}
+
+function pickMaterial(cb, opts={}){
+  const list=S.materials.filter(m=>opts.inStockOnly? m.qty>0 : true).sort((a,b)=>a.name.localeCompare(b.name,'mk'));
+  openModal(`<div class="mhead"><h3>${opts.title||'Избери материјал'}</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody" style="padding-bottom:18px">
+    <div class="search" style="margin-bottom:10px"><svg class="ic ic-sm" viewBox="0 0 24 24">${I.search}</svg><input id="pickSearch" placeholder="Пребарај…" autocomplete="off"></div>
+    <div class="picklist" id="pickList" style="max-height:340px">${list.map(m=>pickRow(m)).join('')||`<div class="empty" style="padding:30px"><p>Нема материјали.</p></div>`}</div>
+  </div>`);
+  const inp=modalEl.querySelector('#pickSearch');
+  inp.addEventListener('input',()=>{
+    const q=inp.value.toLowerCase();
+    const f=list.filter(m=>(m.name+' '+(m.code||'')).toLowerCase().includes(q));
+    modalEl.querySelector('#pickList').innerHTML=f.map(m=>pickRow(m)).join('')||`<div class="empty" style="padding:24px"><p>Нема резултат.</p></div>`;
+  });
+  modalEl.querySelector('#pickList').addEventListener('click',e=>{
+    const it=e.target.closest('[data-pick]'); if(!it)return;
+    cb(matById(it.dataset.pick));
+  });
+}
+function pickRow(m){
+  const st=statusOf(m);
+  return `<button class="pickitem" data-pick="${m.id}"><span class="dot ${st}"></span><div class="pn"><b>${esc(m.name)}</b><span class="mono" style="font-size:11px">${esc(m.code||'—')} · ${esc(m.unit)}</span></div><span class="pq num">${fmt(m.qty)}</span></button>`;
+}
+
+/* ---- Quick in/out ---- */
+function quickAdjust(id,dir){
+  const m=matById(id); if(!m)return;
+  if(dir==='out'){ openConsume(null,m); return; }
+  openModal(`<div class="mhead"><h3>Прием — ${esc(m.name)}</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody">
+    <div class="field"><label>Количина (${esc(m.unit)})</label>
+      <div class="stepper"><button data-step="-1">−</button><input id="q_qty" class="num" type="number" inputmode="decimal" value="1"><button data-step="1">+</button></div>
+    </div>
+    <div class="field"><label>Добавувач (опционално)</label><input class="inp" id="q_sup" placeholder="Име на добавувач"></div>
+    <div class="field"><label>Забелешка</label><input class="inp" id="q_note" placeholder="пр. Фактура #…"></div>
+  </div>
+  <div class="mfoot"><button class="btn btn-primary" id="q_ok">${svg(I.down,'ic ic-sm')}Прими +</button></div>`);
+  wireStepper();
+  modalEl.querySelector('#q_ok').addEventListener('click',()=>{
+    const q=parseFloat(modalEl.querySelector('#q_qty').value);
+    if(!(q>0))return toast('Внеси количина','bad');
+    const tid=applyIn(id,q,{supplier:modalEl.querySelector('#q_sup').value.trim(),note:modalEl.querySelector('#q_note').value.trim(),source:'manual'});
+    save(); closeModal(); render(); buildNav(); toast(`Примени ${fmt(q)} ${m.unit}`,'ok',tid?()=>undoBatch([tid]):null);
+  });
+}
+
+/* ---- Consume ---- */
+let consumeCart=[]; // {matId,qty}
+let consumeState={lamela:null,note:'',firma:'',date:''};
+function openConsume(preLamela,preMat){
+  consumeCart = preMat?[{matId:preMat.id,qty:1}]:[];
+  consumeState={lamela:preLamela||(S.lamele[0]&&S.lamele[0].id)||null, note:'', firma:'', date:tsToDateInput(now())};
+  renderConsumeModal();
+}
+function syncConsumeState(){
+  const l=modalEl.querySelector('#c_lam'), n=modalEl.querySelector('#c_note'), f=modalEl.querySelector('#c_firma'), d=modalEl.querySelector('#c_date');
+  if(l)consumeState.lamela=l.value; if(n)consumeState.note=n.value; if(f)consumeState.firma=f.value; if(d)consumeState.date=d.value;
+}
+function renderConsumeModal(){
+  const lamOptsHtml=S.lamele.map(l=>`<option value="${l.id}" ${consumeState.lamela===l.id?'selected':''}>${esc(l.name)}</option>`).join('');
+  const linesHtml = consumeCart.length? consumeCart.map((c,i)=>{
+    const m=matById(c.matId); if(!m)return'';
+    const over=(parseFloat(c.qty)||0)>m.qty;
+    return `<div class="cline">
+      <div class="cn"><b>${esc(m.name)}</b><span>залиха: ${fmt(m.qty)} ${esc(m.unit)} ${over?'· <span style="color:var(--danger-t)">недоволно!</span>':''}</span></div>
+      <div class="cstep"><button data-cstep="${i},-1">−</button><input class="num" data-cqty="${i}" value="${c.qty}" inputmode="decimal"><button data-cstep="${i},1">+</button></div>
+      <button class="btn btn-soft btn-icon btn-sm" data-crem="${i}">${svg(I.x,'ic ic-sm')}</button>
+    </div>`;
+  }).join('') : `<div class="empty" style="padding:24px 10px"><p>Додај материјали за издавање.</p></div>`;
+
+  const firmOpts=knownFirms().map(f=>`<option value="${esc(f)}">`).join('');
+  openModal(`<div class="mhead"><h3>Издавање материјал</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody">
+    <div class="field"><label>Ламела / објект</label><select class="inp" id="c_lam">${lamOptsHtml}</select></div>
+    <div class="row2">
+      <div class="field"><label>Фирма / изведувач</label><input class="inp" id="c_firma" list="firmList" value="${esc(consumeState.firma||'')}" placeholder="Кој ја троши"><div class="hint">Кој ја зема залихата</div></div>
+      <div class="field"><label>Датум</label><input class="inp" id="c_date" type="date" value="${esc(consumeState.date||'')}"></div>
+    </div>
+    <datalist id="firmList">${firmOpts}</datalist>
+    <div class="field"><label>Забелешка (опционално)</label><input class="inp" id="c_note" value="${esc(consumeState.note)}" placeholder="пр. Ѕидови приземје"></div>
+    <div class="field"><label>Материјали</label><div id="c_lines">${linesHtml}</div>
+      <button class="btn btn-ghost btn-block btn-sm" data-act="c-add" style="margin-top:10px">${svg(I.plus,'ic ic-sm')}Додај материјал</button>
+    </div>
+  </div>
+  <div class="mfoot"><button class="btn btn-primary" data-act="c-save">${svg(I.truck,'ic ic-sm')}Издај и намали залиха</button></div>`);
+}
+function refreshConsumeLines(){ syncConsumeState(); renderConsumeModal(); }
+
+/* ---- Manual receive (multi) ---- */
+let recvCart=[];
+let recvState={sup:'',note:''};
+function openManualReceive(){
+  recvCart=[]; recvState={sup:'',note:''}; renderReceiveModal();
+}
+function syncReceiveState(){
+  const s=modalEl.querySelector('#r_sup'), n=modalEl.querySelector('#r_note');
+  if(s)recvState.sup=s.value; if(n)recvState.note=n.value;
+}
+function renderReceiveModal(){
+  const lines=recvCart.length? recvCart.map((c,i)=>{
+    const m=matById(c.matId); if(!m)return'';
+    return `<div class="cline">
+      <div class="cn"><b>${esc(m.name)}</b><span>тековна: ${fmt(m.qty)} ${esc(m.unit)}</span></div>
+      <div class="cstep"><button data-rstep="${i},-1">−</button><input class="num" data-rqty="${i}" value="${c.qty}" inputmode="decimal"><button data-rstep="${i},1">+</button></div>
+      <button class="btn btn-soft btn-icon btn-sm" data-rrem="${i}">${svg(I.x,'ic ic-sm')}</button>
+    </div>`;
+  }).join('') : `<div class="empty" style="padding:24px 10px"><p>Додај материјали што пристигнале.</p></div>`;
+  const supOpts=knownSuppliers().map(s=>`<option value="${esc(s)}">`).join('');
+  openModal(`<div class="mhead"><h3>Рачен прием</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody">
+    <div class="field"><label>Добавувач</label><input class="inp" id="r_sup" list="supList" value="${esc(recvState.sup)}" placeholder="Име на добавувач"></div>
+    <datalist id="supList">${supOpts}</datalist>
+    <div class="field"><label>Број на фактура (опционално)</label><input class="inp" id="r_note" value="${esc(recvState.note)}" placeholder="Фактура #…"></div>
+    <div class="field"><label>Материјали</label><div id="r_lines">${lines}</div>
+      <button class="btn btn-ghost btn-block btn-sm" data-act="r-add" style="margin-top:10px">${svg(I.plus,'ic ic-sm')}Додај материјал</button>
+    </div>
+  </div>
+  <div class="mfoot"><button class="btn btn-primary" data-act="r-save">${svg(I.down,'ic ic-sm')}Прими и зголеми залиха</button></div>`);
+}
+function refreshReceiveLines(){ syncReceiveState(); renderReceiveModal(); }
+
+/* ---- Order form ---- */
+function orderForm(){
+  const units=['парчиња','вреќи','кг','тони','м','м²','м³','литри','ролни','пакети'];
+  return `<div class="mhead"><h3>Нова нарачка</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody">
+    <button class="btn btn-soft btn-block btn-sm" data-act="o-frommat" style="margin-bottom:14px">${svg(I.box,'ic ic-sm')}Избери постоечки материјал</button>
+    <div class="field"><label>Назив на материјал</label><input class="inp" id="o_name" placeholder="пр. Гипс картон плочи"></div>
+    <div class="row2">
+      <div class="field"><label>Шифра</label><input class="inp mono" id="o_code" placeholder="GK-125"></div>
+      <div class="field"><label>Единица</label><select class="inp" id="o_unit">${units.map(u=>`<option>${u}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Количина</label><input class="inp num" id="o_qty" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Добавувач</label><input class="inp" id="o_sup" placeholder="Име"></div>
+    </div>
+  </div>
+  <div class="mfoot"><button class="btn btn-primary" data-act="o-save">${svg(I.check,'ic ic-sm')}Креирај нарачка</button></div>`;
+}
+
+/* =======================================================================
+   ФАКТУРА OCR (Claude vision)
+======================================================================= */
+/* 1568px на подолгата страна е препорачаниот максимум за OCR точност кај Claude vision — над тоа само трошиш повеќе без подобрување */
+async function fileToResized(file,max=1568,q=0.92){
+  const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+  let{width:w,height:h}=img; const sc=Math.min(1,max/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc);
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);
+  ctx.imageSmoothingQuality='high';
+  // благо засилување контраст/осветленост — помага кај фотографии од градилиште со лошо осветлување
+  try{ ctx.filter='contrast(1.14) brightness(1.05) saturate(0.92)'; }catch(e){}
+  ctx.drawImage(img,0,0,w,h);
+  return cv.toDataURL('image/jpeg',q).split(',')[1];
+}
+/* робусно парсирање на број од фактура (запирка = децимала, точка/празно = илјади) */
+function parseNum(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number')return isFinite(v)?v:null;
+  let s=String(v).trim().replace(/[^\d.,\-]/g,'');
+  if(!s)return null;
+  const hasC=s.includes(','), hasD=s.includes('.');
+  if(hasC&&hasD) s=s.replace(/\./g,'').replace(',','.');
+  else if(hasC) s=s.replace(',','.');
+  const n=parseFloat(s);
+  return isFinite(n)?n:null;
+}
+/* ---- Собирање страници пред скенирање ---- */
+let invoicePages=[]; // File[]
+function renderPageCollector(){
+  const thumbs=invoicePages.map((f,i)=>`<div class="pgthumb"><img src="${URL.createObjectURL(f)}"><button data-pagerem="${i}">${svg(I.x,'ic ic-sm')}</button><span class="pgnum">${i+1}</span></div>`).join('');
+  openModal(`<div class="mhead"><h3>Фактура — ${invoicePages.length} ${invoicePages.length===1?'страница':'страници'}</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody">
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Ако фактурата има повеќе страници, додади ги сите — сите ставки ќе се вчитаат заедно во еден преглед.</p>
+    <div class="pggrid">${thumbs}
+      <button class="pgadd" data-act="page-add">${svg(I.cam,'ic')}<span>Додади страница</span></button>
+    </div>
+  </div>
+  <div class="mfoot"><button class="btn btn-ghost" data-close>Откажи</button><button class="btn btn-primary" data-act="page-scan">${svg(I.check,'ic ic-sm')}Скенирај${invoicePages.length>1?' сѐ':''}</button></div>`);
+}
+
+/* ---- OCR повик кон Claude vision, со еден автоматски повтор ако форматот не е валиден ---- */
+async function callInvoiceOCR(b64s,isRetry){
+  const multi=b64s.length>1;
+  const prompt=`Ти си прецизен систем за читање фактури за градежни материјали. Текстот на фактурата е најчесто на македонски (кирилица), понекогаш и латиница.
+${multi?`\nПриложени се ${b64s.length} слики кои се СТРАНИЦИ ОД ИСТА фактура, по редослед. Спој ги сите редови од сите страници во ЕДНА заедничка листа.\n`:''}
+Прочитај ја табелата со ставки (артикли) и врати ги сите редови. За секој ред извлечи:
+- name: назив на артиклот, точно како што е напишан
+- code: шифра / артикл број / шифра на производ (ако постои таква колона), инаку null
+- unit: единица мерка (пр. парче, вреќа, кг, тон, м, м2, м3, л, ролна, пакет), инаку null
+- qty: количина, чист број
+- price: ЕДИНЕЧНА цена по единица (по можност БЕЗ ДДВ, ако постои таква одвоена колона). НИКОГАШ не земај ја вкупната сума на редот како единечна цена.
+- lineTotal: вкупниот износ на тој ред ако е испечатен на фактурата (обично qty × price), инаку null — ова поле служи само за проверка, не мора да е точно пресметано од тебе.
+
+ВАЖНО за броеви: на македонски фактури децималниот разделувач е ЗАПИРКА (пр. "1.150,50" значи илјада сто педесет цела педесет, а не милион). Врати ги СИТЕ броеви како чист број со точка за децимала и БЕЗ разделувач за илјади (пр. 1150.5, 290, 12).
+
+ИГНОРИРАЈ редови/линии кои НЕ се артикли: меѓузбир, подзбир, основица, ДДВ/данок, попуст, вкупно за плаќање, износ на фактура, рекапитулација, превоз (освен ако превозот е засебна ставка со своја количина и цена). Игнорирај ги заглавјето, податоците за купувач/продавач и футерот.
+
+Ако некоја вредност навистина не се гледа јасно или не постои на фактурата, стави null — никогаш не измислувај/погодувај бројка.
+
+Врати ИСКЛУЧИВО валиден JSON низа, без markdown ограда (без \`\`\`), без никаков текст пред или по неа.
+Пример на формат: [{"name":"Цемент CEM II 42,5","code":"CEM-425","unit":"вреќа","qty":50,"price":290,"lineTotal":14500}]`;
+  const imageBlocks=b64s.map(b64=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}}));
+  const endpoint=(S.settings.aiProxyUrl||'').trim() || "https://api.anthropic.com/v1/messages";
+  const resp=await fetch(endpoint,{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:4000,
+      messages:[{role:"user",content:[...imageBlocks,{type:"text",text:prompt}]}]
+    })
+  });
+  const data=await resp.json();
+  if(data.error) throw new Error(data.error.message||'api');
+  let txt=(data.content||[]).map(c=>c.type==='text'?c.text:'').join('').trim();
+  txt=txt.replace(/```json/gi,'').replace(/```/g,'').trim();
+  const start=txt.indexOf('['), end=txt.lastIndexOf(']');
+  if(start>=0&&end>=0)txt=txt.slice(start,end+1);
+  let items;
+  try{ items=JSON.parse(txt); }
+  catch(parseErr){
+    if(!isRetry) return callInvoiceOCR(b64s,true); // еден автоматски обид повторно
+    throw parseErr;
+  }
+  if(!Array.isArray(items)) { if(!isRetry) return callInvoiceOCR(b64s,true); throw new Error('bad-shape'); }
+  return items.map(x=>({
+    name:(x.name||'').toString().trim(),
+    code:(x.code||'').toString().trim(),
+    unit:(x.unit||'парчиња').toString().trim(),
+    qty:parseNum(x.qty),
+    price:parseNum(x.price),
+    lineTotal:parseNum(x.lineTotal)
+  })).filter(x=>x.name);
+}
+async function scanInvoiceMulti(files){
+  openModal(`<div class="mhead"><h3>Читање фактура…</h3></div><div class="scanning"><div class="spin"></div><p style="color:var(--muted);margin-top:16px">${files.length>1?`Ги препознавам ставките од ${files.length} страници…`:'Ги препознавам ставките, шифрите и единечните цени…'}</p><div class="bar"><i></i></div></div>`);
+  try{
+    const b64s=await Promise.all(files.map(f=>fileToResized(f)));
+    const items=await callInvoiceOCR(b64s,false);
+    if(!items.length) throw new Error('empty');
+    reviewInvoice(items);
+  }catch(e){
+    console.error(e);
+    openModal(`<div class="mhead"><h3>Не успеа читањето</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+    <div class="mbody"><div class="empty" style="padding:24px"><div class="eic">${svg(I.alert)}</div><h3>Не се препознаа ставките</h3><p>Пробај појасна слика — добра осветленост, права фактура од горе, без сенки и без замор. Или внеси го приемот рачно.</p></div></div>
+    <div class="mfoot"><button class="btn btn-ghost" data-close>Затвори</button><button class="btn btn-primary" data-act="manual-receive">Рачен прием</button></div>`);
+  }
+}
+
+/* ---- Рутирање: AI сервер ако е поставен, инаку целосно офлајн читање на самиот уред ---- */
+function scanInvoiceRouted(files){
+  const proxy=(S.settings.aiProxyUrl||'').trim();
+  if(proxy) return scanInvoiceMulti(files);
+  return scanInvoiceOffline(files);
+}
+
+/* ---- Офлајн читање (Tesseract) — без интернет по првото симнување на јазичниот пакет, без клуч, бесплатно ---- */
+let tesseractWorker=null;
+async function getTesseractWorker(onProgress){
+  if(tesseractWorker) return tesseractWorker;
+  tesseractWorker=await Tesseract.createWorker('mkd+eng',1,{ logger:m=>{ if(onProgress)onProgress(m); } });
+  return tesseractWorker;
+}
+function ocrProgressLabel(m){
+  const pct=m.progress!=null?Math.round(m.progress*100):null;
+  const label=m.status==='recognizing text'?'Препознавам текст'
+    :m.status==='loading language traineddata'?'Го симнувам јазичниот пакет (само првпат)'
+    :m.status==='initializing api'?'Подготовка'
+    :m.status||'Работам';
+  return label+(pct!=null?` ${pct}%`:'…');
+}
+/* ги извлекува редовите-артикли од сирoв OCR текст со хеуристика: последните бројки на редот = кол./цена/износ */
+function parseInvoiceTextToItems(text){
+  const IGNORE=/(подзбир|меѓузбир|вкупно|за плаќање|основиц|ддв|данок|попуст|рекапитулациј|износ на фактура|платено|жиро|iban|фактура бр|датум|купувач|продавач)/i;
+  const numRe=/-?\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?|-?\d+(?:[.,]\d+)?/g;
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+  const items=[];
+  for(const line of lines){
+    if(IGNORE.test(line)) continue;
+    const nums=[...line.matchAll(numRe)];
+    if(!nums.length) continue;
+    let qty=null, price=null, lineTotal=null;
+    if(nums.length>=3){
+      lineTotal=parseNum(nums[nums.length-1][0]);
+      price=parseNum(nums[nums.length-2][0]);
+      qty=parseNum(nums[nums.length-3][0]);
+    }else if(nums.length===2){
+      price=parseNum(nums[nums.length-1][0]);
+      qty=parseNum(nums[nums.length-2][0]);
+    }else{
+      qty=parseNum(nums[0][0]);
+    }
+    let name=line.slice(0,nums[0].index).trim().replace(/[·.\-–_]+$/,'').trim();
+    name=name.replace(/^\d{1,3}[.\)]\s*/,'').trim();
+    if(name.length<2) continue;
+    let code='';
+    const codeMatch=name.match(/^([A-Za-zА-Яа-я0-9\-\/]{3,16})\s+/);
+    if(codeMatch && /\d/.test(codeMatch[1]) && /[A-Za-zА-Яа-я]/.test(codeMatch[1])){ code=codeMatch[1]; name=name.slice(codeMatch[0].length).trim(); }
+    if(name.length<2) continue;
+    items.push({name,code,unit:'парчиња',qty,price,lineTotal});
+  }
+  return items;
+}
+async function scanInvoiceOffline(files){
+  let allItems=[];
+  try{
+    for(let i=0;i<files.length;i++){
+      openModal(`<div class="mhead"><h3>Офлајн читање…</h3></div>
+      <div class="scanning"><div class="spin"></div>
+      <p style="color:var(--muted);margin-top:16px" id="ocrStatus">${files.length>1?`Страница ${i+1} од ${files.length} — п`:'П'}одготовка…</p>
+      <p style="color:var(--faint);font-size:11.5px;margin-top:8px">Работи директно на уредот, без интернет (по прв пат)</p>
+      <div class="bar"><i></i></div></div>`);
+      const b64=await fileToResized(files[i],2000,0.92);
+      const worker=await getTesseractWorker(m=>{
+        const st=document.getElementById('ocrStatus');
+        if(st) st.textContent=(files.length>1?`Страница ${i+1} од ${files.length} — `:'')+ocrProgressLabel(m);
+      });
+      const{data:{text}}=await worker.recognize('data:image/jpeg;base64,'+b64);
+      allItems=allItems.concat(parseInvoiceTextToItems(text));
+    }
+  }catch(e){
+    console.error(e);
+    openModal(`<div class="mhead"><h3>Не успеа офлајн читањето</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+    <div class="mbody"><div class="empty" style="padding:24px"><div class="eic">${svg(I.alert)}</div><h3>Проблем со читањето</h3><p>Провери интернет врска за прв пат (за да се симне јазичниот пакет), или внеси го приемот рачно.</p></div></div>
+    <div class="mfoot"><button class="btn btn-ghost" data-close>Затвори</button><button class="btn btn-primary" data-act="manual-receive">Рачен прием</button></div>`);
+    return;
+  }
+  if(!allItems.length){
+    openModal(`<div class="mhead"><h3>Не се препознаа ставки</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+    <div class="mbody"><div class="empty" style="padding:24px"><div class="eic">${svg(I.alert)}</div><h3>Празен резултат</h3><p>Офлајн читањето не препозна редови со артикли. Пробај појасна, порамна слика или внеси рачно.</p></div></div>
+    <div class="mfoot"><button class="btn btn-ghost" data-close>Затвори</button><button class="btn btn-primary" data-act="manual-receive">Рачен прием</button></div>`);
+    return;
+  }
+  reviewInvoice(allItems);
+}
+
+let invItems=[], invSup='';
+function reviewInvoice(items){
+  invItems=items; invSup=''; renderInvReview();
+}
+function invTotal(){ return invItems.reduce((s,it)=>s+((parseNum(it.qty)||0)*(parseNum(it.price)||0)),0); }
+/* флаг за ставки кои треба рачно да се проверат: недостасува податок, или износот не се совпаѓа со кол.×цена */
+function rowFlag(it){
+  const q=parseNum(it.qty), p=parseNum(it.price);
+  if(q==null||p==null||!(q>0)) return 'missing';
+  if(it.lineTotal!=null){
+    const calc=q*p, diff=Math.abs(calc-it.lineTotal);
+    if(diff>Math.max(1,it.lineTotal*0.02)) return 'mismatch';
+  }
+  return null;
+}
+function renderInvReview(){
+  const rows=invItems.map((it,i)=>{
+    const flag=rowFlag(it);
+    const hint=flag==='missing'?'Недостасува количина или цена — пополни рачно':flag==='mismatch'?'Износот не се совпаѓа со количина × цена — провери':null;
+    return `<div class="rwrap ${flag?'flag':''}">
+      <div class="rline">
+        <input class="rinp" data-iv="name,${i}" value="${esc(it.name)}" placeholder="Назив на артикл">
+        <input class="rinp mono" data-iv="code,${i}" value="${esc(it.code||'')}" placeholder="шифра">
+        <input class="rinp num" data-iv="qty,${i}" value="${it.qty??''}" placeholder="кол." inputmode="decimal">
+        <input class="rinp num" data-iv="price,${i}" value="${it.price??''}" placeholder="цена" inputmode="decimal">
+        <button class="rdel" data-ivdel="${i}" title="Отстрани">${svg(I.trash,'ic ic-sm')}</button>
+      </div>
+      ${hint?`<div class="rhint">${svg(I.alert,'ic ic-sm')}${hint}</div>`:''}
+    </div>`;
+  }).join('');
+  const flagCount=invItems.filter(it=>rowFlag(it)).length;
+  openModal(`<div class="mhead"><h3>Проверка на ставки</h3><button class="mclose" data-close>${svg(I.x,'ic')}</button></div>
+  <div class="mbody">
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Провери ги препознаените ставки. Цената е <b>единечна</b> (за 1 единица). Новите артикли автоматски се додаваат во магацин.${flagCount?` <b style="color:var(--warn-t)">${flagCount} ${flagCount===1?'ставка е':'ставки се'} означени</b> за проверка.`:''}</p>
+    <div class="field"><label>Добавувач (опционално)</label><input class="inp" id="iv_sup" value="${esc(invSup)}" placeholder="Име на добавувач"></div>
+    <div class="rhead"><span>Артикл</span><span>Шифра</span><span>Кол.</span><span>Цена</span><span></span></div>
+    <div id="ivList">${rows||`<div class="empty" style="padding:20px"><p>Нема ставки. Додај рачно ↓</p></div>`}</div>
+    <button class="btn btn-ghost btn-block btn-sm" data-act="iv-add" style="margin-top:10px">${svg(I.plus,'ic ic-sm')}Додај ставка</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-2)">
+      <span style="font-size:13px;color:var(--muted);font-weight:600">Вкупна вредност</span>
+      <span class="num" style="font-size:17px;font-weight:800">${money(invTotal())}</span>
+    </div>
+  </div>
+  <div class="mfoot"><button class="btn btn-ghost" data-close>Откажи</button><button class="btn btn-primary" data-act="iv-confirm">${svg(I.check,'ic ic-sm')}Прими ${invItems.length} ${invItems.length===1?'ставка':'ставки'}</button></div>`);
+  const sup=modalEl.querySelector('#iv_sup'); if(sup)sup.addEventListener('input',()=>{ invSup=sup.value; });
+  modalEl.querySelector('#ivList').addEventListener('input',e=>{
+    const t=e.target.closest('[data-iv]'); if(!t)return;
+    const[f,i]=t.dataset.iv.split(','); const it=invItems[i]; if(!it)return;
+    if(f==='name'||f==='code')it[f]=t.value; else it[f]=t.value===''?null:t.value;
+    // живо освежување на flag-хинтот за тој ред + вкупниот збир, без цел re-render (да не се губи фокус)
+    const wrap=t.closest('.rwrap'); if(wrap){
+      const flag=rowFlag(it); wrap.classList.toggle('flag',!!flag);
+      let hintEl=wrap.querySelector('.rhint');
+      const hint=flag==='missing'?'Недостасува количина или цена — пополни рачно':flag==='mismatch'?'Износот не се совпаѓа со количина × цена — провери':null;
+      if(hint&&!hintEl){ wrap.insertAdjacentHTML('beforeend',`<div class="rhint">${svg(I.alert,'ic ic-sm')}${hint}</div>`); }
+      else if(hint&&hintEl){ hintEl.innerHTML=`${svg(I.alert,'ic ic-sm')}${hint}`; }
+      else if(!hint&&hintEl){ hintEl.remove(); }
+    }
+    const totEl=modalEl.querySelector('.mbody > div[style*="space-between"] .num'); if(totEl)totEl.textContent=money(invTotal());
+  });
+}
+function confirmInvoice(){
+  const sup=(modalEl.querySelector('#iv_sup')?.value||invSup||'').trim();
+  let ids=[], created=[];
+  invItems.forEach(it=>{
+    const qty=parseNum(it.qty), price=parseNum(it.price);
+    if(!it.name||!(qty>0))return;
+    let m=S.materials.find(x=>(it.code&&x.code&&x.code.toLowerCase()===it.code.toLowerCase()) || x.name.toLowerCase()===it.name.toLowerCase());
+    if(!m){
+      m={id:uid(),name:it.name,code:(it.code||'').trim(),unit:it.unit||'парчиња',price:price||0,qty:0,min:0,ts:now()};
+      S.materials.push(m); created.push(m.id);
+    }
+    const tid=applyIn(m.id,qty,{supplier:sup,note:'Фактура (скенирана)',source:'invoice',price:price!=null?price:m.price});
+    if(tid)ids.push(tid);
+  });
+  if(!ids.length){ toast('Нема валидни ставки','bad'); return; }
+  save(); closeModal(); go('receive');
+  toast(`Примени ${ids.length} ставки од фактура`,'ok',()=>undoBatch(ids,created));
+}
+
+/* =======================================================================
+   HANDLERS (делегирано)
+======================================================================= */
+function wireStepper(){
+  modalEl.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{
+    const inp=modalEl.querySelector('#q_qty'); let v=parseFloat(inp.value)||0; v+=parseInt(b.dataset.step); if(v<0)v=0; inp.value=v;
+  }));
+}
+
+document.addEventListener('click',async e=>{
+  // close
+  if(e.target.closest('[data-close]')){ closeModal(); return; }
+  // more sheet nav
+  const more=e.target.closest('[data-more]'); if(more){ closeModal(); go(more.dataset.more); return; }
+  // filters
+  const fl=e.target.closest('[data-filter]'); if(fl){ MFILTER=fl.dataset.filter; render(); return; }
+  const hf=e.target.closest('[data-hfilter]'); if(hf){ HFILTER=hf.dataset.hfilter; render(); return; }
+  // lamela open
+  const lam=e.target.closest('[data-lamela]'); if(lam&&!e.target.closest('[data-act]')){ const l=lamById(lam.dataset.lamela); go('lamele',{lamela:lam.dataset.lamela,title:l?l.name:'Ламела',sub:'Потрошувачка по ламела'}); return; }
+  // material row edit
+  const mr=e.target.closest('[data-mrow]'); if(mr&&!e.target.closest('[data-act]')){ openModal(materialForm(matById(mr.dataset.mrow))); return; }
+
+  const act=e.target.closest('[data-act]'); if(!act)return;
+  const A=act.dataset.act, id=act.dataset.id;
+
+  if(A==='add-material'){ openModal(materialForm(null)); }
+  else if(A==='edit-material'){ openModal(materialForm(matById(id))); }
+  else if(A==='save-material'){
+    const g=s=>modalEl.querySelector(s);
+    const name=g('#f_name').value.trim(); if(!name)return toast('Внеси назив','bad');
+    const obj={ name, code:g('#f_code').value.trim(), unit:g('#f_unit').value, price:parseFloat(g('#f_price').value)||0, min:parseFloat(g('#f_min').value)||0 };
+    if(id){ Object.assign(matById(id),obj); toast('Артиклот е зачуван'); }
+    else { obj.id=uid(); obj.qty=parseFloat(g('#f_qty').value)||0; obj.ts=now(); S.materials.push(obj); if(obj.qty>0){S.txns.unshift({id:uid(),type:'in',matId:obj.id,matName:obj.name,unit:obj.unit,qty:obj.qty,price:obj.price,lamela:null,supplier:'',note:'Почетна залиха',source:'manual',ts:now()});} toast('Артиклот е додаден'); }
+    save(); closeModal(); render(); buildNav();
+  }
+  else if(A==='del-material'){
+    if(!confirm('Избриши го артиклот и сите негови движења?'))return;
+    S.materials=S.materials.filter(m=>m.id!==id); S.txns=S.txns.filter(t=>t.matId!==id);
+    save(); closeModal(); render(); buildNav(); toast('Артиклот е избришан');
+  }
+  else if(A==='quick-in'){ quickAdjust(id,'in'); }
+  else if(A==='quick-out'){ quickAdjust(id,'out'); }
+
+  // consume
+  else if(A==='new-consume'){ openConsume(act.dataset.lamela||null); }
+  else if(A==='c-add'){ syncConsumeState(); pickMaterial(m=>{ if(!consumeCart.find(c=>c.matId===m.id))consumeCart.push({matId:m.id,qty:1}); renderConsumeModal(); },{title:'Додај за издавање',inStockOnly:true}); }
+  else if(A==='c-save'){
+    syncConsumeState();
+    const lamId=consumeState.lamela; const note=(consumeState.note||'').trim(); const firma=(consumeState.firma||'').trim(); const date=consumeState.date;
+    if(!consumeCart.length)return toast('Додај материјал','bad');
+    let ids=[]; consumeCart.forEach(c=>{ if(parseFloat(c.qty)>0){ const t=applyOut(c.matId,c.qty,lamId,{note,firma,date}); if(t)ids.push(t); } });
+    if(!ids.length)return toast('Внеси количина','bad');
+    save(); closeModal(); render(); buildNav(); toast(`Издадени ${ids.length} ставки`,'ok',()=>undoBatch(ids));
+  }
+
+  // receive
+  else if(A==='manual-receive'){ openManualReceive(); }
+  else if(A==='r-add'){ syncReceiveState(); pickMaterial(m=>{ if(!recvCart.find(c=>c.matId===m.id))recvCart.push({matId:m.id,qty:1}); renderReceiveModal(); },{title:'Додај за прием'}); }
+  else if(A==='r-save'){
+    syncReceiveState();
+    const sup=(recvState.sup||'').trim(); const note=(recvState.note||'').trim();
+    if(!recvCart.length)return toast('Додај материјал','bad');
+    let ids=[]; recvCart.forEach(c=>{ if(parseFloat(c.qty)>0){ const t=applyIn(c.matId,c.qty,{supplier:sup,note,source:'manual'}); if(t)ids.push(t); } });
+    if(!ids.length)return toast('Внеси количина','bad');
+    save(); closeModal(); render(); buildNav(); toast(`Примени ${ids.length} ставки`,'ok',()=>undoBatch(ids));
+  }
+
+  // orders
+  else if(A==='new-order'){ openModal(orderForm()); }
+  else if(A==='o-frommat'){ pickMaterial(m=>{ openModal(orderForm()); setTimeout(()=>{ modalEl.querySelector('#o_name').value=m.name; modalEl.querySelector('#o_code').value=m.code||''; const us=modalEl.querySelector('#o_unit'); [...us.options].forEach(o=>{if(o.value===m.unit)o.selected=true;}); modalEl.querySelector('#o_qty').focus(); },60); },{title:'Избери материјал'}); }
+  else if(A==='o-save'){
+    const g=s=>modalEl.querySelector(s);
+    const name=g('#o_name').value.trim(); const qty=parseFloat(g('#o_qty').value)||0;
+    if(!name)return toast('Внеси назив','bad'); if(!(qty>0))return toast('Внеси количина','bad');
+    S.orders.unshift({id:uid(),matName:name,code:g('#o_code').value.trim(),qty,unit:g('#o_unit').value,supplier:g('#o_sup').value.trim(),status:'ordered',ts:now()});
+    save(); closeModal(); render(); toast('Нарачката е креирана');
+  }
+  else if(A==='receive-order'){
+    const o=S.orders.find(x=>x.id===id); if(!o)return;
+    let created=null;
+    let m=S.materials.find(x=>(o.code&&x.code&&x.code.toLowerCase()===o.code.toLowerCase())||x.name.toLowerCase()===o.matName.toLowerCase());
+    if(!m){ m={id:uid(),name:o.matName,code:o.code||'',unit:o.unit,price:0,qty:0,min:0,ts:now()}; S.materials.push(m); created=m.id; }
+    const tid=applyIn(m.id,o.qty,{supplier:o.supplier,note:'Прием од нарачка',source:'order'});
+    o.status='received'; o.receivedTs=now();
+    save(); render(); buildNav();
+    toast(`${o.matName} примен во магацин`,'ok',()=>{ if(tid)undoBatch([tid],created?[created]:[]); o.status='ordered'; delete o.receivedTs; save(); render(); });
+  }
+  else if(A==='del-order'){ S.orders=S.orders.filter(o=>o.id!==id); save(); render(); toast('Нарачката е избришана'); }
+
+  // history delete
+  else if(A==='del-txn'){
+    const t=S.txns.find(x=>x.id===id); if(!t)return;
+    if(!confirm('Избриши го движењето? Залихата ќе се врати.'))return;
+    reverseTxn(t); save(); render(); buildNav(); toast('Движењето е избришано');
+  }
+
+  // invoice
+  else if(A==='page-add'){ document.getElementById('invFile').click(); }
+  else if(A==='page-scan'){ if(!invoicePages.length)return; scanInvoiceRouted(invoicePages.slice()); }
+  else if(A==='iv-add'){ invItems.push({name:'',code:'',unit:'парчиња',qty:null,price:null,lineTotal:null}); renderInvReview(); }
+  else if(A==='iv-confirm'){ confirmInvoice(); }
+
+  // settings
+  else if(A==='save-settings'){
+    const cv=document.getElementById('setCur').value.trim()||'ден.'; S.settings.currency=cv;
+    S.settings.aiProxyUrl=(document.getElementById('setAiUrl')?.value||'').trim();
+    document.querySelectorAll('[data-lam]').forEach(inp=>{ const l=lamById(inp.dataset.lam); if(l)l.name=inp.value.trim()||l.name; });
+    save(); render(); buildNav(); toast('Поставките се зачувани');
+  }
+  else if(A==='test-ai'){ testAiProxy(); }
+  else if(A==='export'){ exportCSV(); }
+  else if(A==='reset'){
+    if(!confirm('Ова ќе ги избрише СИТЕ артикли, движења и нарачки. Продолжи?'))return;
+    seed(); await window.storage.set(STORE_KEY,JSON.stringify(S)); go('dashboard'); toast('Сѐ е избришано');
+  }
+});
+
+/* consume/receive line steppers & inputs (delegated on modal) */
+modalEl.addEventListener('click',e=>{
+  const cs=e.target.closest('[data-cstep]'); if(cs){ const[i,d]=cs.dataset.cstep.split(',').map(Number); consumeCart[i].qty=Math.max(0,(parseFloat(consumeCart[i].qty)||0)+d); refreshConsumeLines(); return; }
+  const cr=e.target.closest('[data-crem]'); if(cr){ consumeCart.splice(+cr.dataset.crem,1); refreshConsumeLines(); return; }
+  const rs=e.target.closest('[data-rstep]'); if(rs){ const[i,d]=rs.dataset.rstep.split(',').map(Number); recvCart[i].qty=Math.max(0,(parseFloat(recvCart[i].qty)||0)+d); refreshReceiveLines(); return; }
+  const rr=e.target.closest('[data-rrem]'); if(rr){ recvCart.splice(+rr.dataset.rrem,1); refreshReceiveLines(); return; }
+  const ivd=e.target.closest('[data-ivdel]'); if(ivd){ invItems.splice(+ivd.dataset.ivdel,1); renderInvReview(); return; }
+  const pgr=e.target.closest('[data-pagerem]'); if(pgr){ invoicePages.splice(+pgr.dataset.pagerem,1); if(invoicePages.length)renderPageCollector(); else closeModal(); return; }
+});
+modalEl.addEventListener('input',e=>{
+  const cq=e.target.closest('[data-cqty]'); if(cq){ consumeCart[+cq.dataset.cqty].qty=cq.value; }
+  const rq=e.target.closest('[data-rqty]'); if(rq){ recvCart[+rq.dataset.rqty].qty=rq.value; }
+});
+
+/* file input for invoice — секоја избрана слика се додава како страница */
+document.addEventListener('change',e=>{
+  if(e.target.id==='invFile'&&e.target.files[0]){
+    invoicePages.push(e.target.files[0]);
+    e.target.value='';
+    renderPageCollector();
+  }
+});
+
+/* =======================================================================
+   CSV EXPORT
+======================================================================= */
+function exportCSV(){
+  let rows=[['Тип','Артикл','Шифра','Количина','Единица','Цена','Вредност','Ламела','Фирма/изведувач','Добавувач','Забелешка','Датум']];
+  S.txns.slice().reverse().forEach(t=>{
+    const l=t.lamela?lamById(t.lamela):null;
+    rows.push([ t.type==='in'?'Прием':'Потрошувачка', t.matName, matById(t.matId)?.code||'', t.qty, t.unit, t.price, (t.qty*t.price).toFixed(2), l?l.name:'', t.firma||'', t.supplier||'', t.note||'', new Date(t.ts).toLocaleString('mk-MK') ]);
+  });
+  const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='magacin-istorija.csv'; a.click();
+  toast('Историјата е извезена');
+}
+
+/* =======================================================================
+   TOAST
+======================================================================= */
+function toast(msg,type='ok',undoFn){
+  const el=document.createElement('div'); el.className='toast '+type;
+  el.innerHTML=svg(type==='bad'?I.alert:I.check,'ic')+`<span>${esc(msg)}</span>`;
+  let ttl=undoFn?5200:2400;
+  if(undoFn){
+    const b=document.createElement('button'); b.className='toast-undo';
+    b.innerHTML=svg(I.undo,'ic ic-sm')+'Врати';
+    b.addEventListener('click',()=>{ undoFn(); el.classList.add('out'); setTimeout(()=>el.remove(),300); toast('Вратено'); });
+    el.appendChild(b);
+  }
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),320); },ttl);
+}
+
+/* =======================================================================
+   BOOT
+======================================================================= */
+(async function(){
+  await load();
+  buildNav();
+  go('dashboard');
+  setTimeout(()=>document.getElementById('splash').classList.add('hide'),380);
+})();
+</script>
