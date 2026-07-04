@@ -1,0 +1,10 @@
+name = "magacin-ai"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# По deploy, постави го клучот како секрет (никогаш во ова фајл):
+#   wrangler secret put ANTHROPIC_API_KEY
+#
+# По желба, ограничи од кој домен смее да се повикува Worker-от:
+#   wrangler secret put ALLOWED_ORIGIN
+# (пр. https://jsholdingwarehouse.com) — инаку останува отворено за сите (*).
