@@ -1437,34 +1437,34 @@ function ocrProgressLabel(m){
     :m.status||'Работам';
   return label+(pct!=null?` ${pct}%`:'…');
 }
-/* пробува да најде количина×цена=износ комбинација меѓу броевите на редот — робусно кај фактури
-   со дополнителни колони меѓу количината и износот (рабат %, износ на рабат, ДДВ % и сл.),
-   наместо да претпоставува дека количина/цена/износ се секогаш последните 3 броја во редот */
-function findConsistentTriple(vals){
+/* побарај цена×количина=износ комбинација меѓу преостанатите броеви на редот (по количината) —
+   робусно кај фактури со дополнителни колони (рабат %, износ на рабат, ДДВ % и сл.) кои инаку
+   би се измешале со цената/износот */
+function findPriceTotal(qty,restVals){
   let best=null;
-  for(let i=0;i<vals.length;i++){
-    if(!(vals[i]>0)) continue;
-    for(let j=0;j<vals.length;j++){
-      if(j===i||!(vals[j]>0)) continue;
-      const calc=vals[i]*vals[j];
-      for(let k=0;k<vals.length;k++){
-        if(k===i||k===j) continue;
-        const total=vals[k]; if(total==null) continue;
-        if(Math.abs(calc-total)<=Math.max(0.5,Math.abs(total)*0.015)){
-          const score=i*100+j;
-          if(!best||score<best.score) best={qty:vals[i],price:vals[j],lineTotal:total,score};
-        }
+  for(let j=0;j<restVals.length;j++){
+    if(!(restVals[j]>0)) continue;
+    const calc=qty*restVals[j];
+    for(let k=0;k<restVals.length;k++){
+      if(k===j) continue;
+      const total=restVals[k]; if(total==null) continue;
+      if(Math.abs(calc-total)<=Math.max(0.5,Math.abs(total)*0.015)){
+        if(!best||j<best.j) best={price:restVals[j],lineTotal:total,j};
       }
     }
   }
   return best;
 }
-/* ги извлекува редовите-артикли од сирoв OCR текст */
+/* ги извлекува редовите-артикли од сирoв OCR текст. Приоритет: име на артикл + количина точни
+   (количината на градежни фактури е речиси секогаш цел број, за разлика од цена/рабат/ДДВ што
+   секогаш имаат децимала — затоа количината се препознава по позиција веднаш по единицата мерка,
+   а не по бројот последни цифри во редот, што е многу поотпорно на расипани децимали подоцна). */
 function parseInvoiceTextToItems(text){
   const IGNORE=/(подзбир|меѓузбир|вкупно|за плаќање|основиц|ддв|данок|попуст|рекапитулациј|износ на фактура|платено|жиро|iban|фактура бр|датум|купувач|продавач)/i;
   const LEADTOK_RE=/^[\d.,\/\-]+$/;
   const NUMTOK_RE=/^-?\d[\d.,]*%?$/;
-  const UNIT_RE=/^(пар|ком|кг|тон|м2|м3|л|ролна|пакет|м)\.?$/i;
+  /* "map"/"nap" се чести OCR-грешки на кирилско "Пар." (слични латинични букви) */
+  const UNIT_RE=/^(пар|парче|вреќа|ком|кг|тон|м2|м3|л|рол(?:на)?|пакет|м|map|nap|тар|par|kom|kg|ton|m2|m3|paket|m)[.:;,]*$/i;
   const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
   const items=[];
   for(const rawLine of lines){
@@ -1475,33 +1475,42 @@ function parseInvoiceTextToItems(text){
     let lead=0;
     while(lead<tokens.length-1 && lead<3 && LEADTOK_RE.test(tokens[lead]) && /\d/.test(tokens[lead])) lead++;
     if(lead) tokens=tokens.slice(lead);
-    /* земи го најдолгиот суфикс од „чисто нумерички" токени од крајот на редот — тоа се
-       вредностите (кол./рабат/цена/износ…). Сѐ пред нив е името, дури и ако името содржи
-       бројки (пр. "ЦЕВ 110/2000", "ШТРАФ 5*40") — тие токени не се „чисто" нумерички. */
-    let end=tokens.length;
-    while(end>0 && NUMTOK_RE.test(tokens[end-1])) end--;
-    const numToks=tokens.slice(end);
-    if(!numToks.length) continue;
-    const vals=numToks.map(parseNum).filter(v=>v!=null);
-    if(!vals.length) continue;
-    let qty=null, price=null, lineTotal=null;
-    if(vals.length>=3){
-      const triple=findConsistentTriple(vals);
-      if(triple){ qty=triple.qty; price=triple.price; lineTotal=triple.lineTotal; }
-      else{
-        lineTotal=vals[vals.length-1];
-        price=vals[vals.length-2];
-        qty=vals[vals.length-3];
-      }
-    }else if(vals.length===2){
-      price=vals[1];
-      qty=vals[0];
+
+    /* пронајди ја колоната "Ед. мера" — сигурна котва меѓу описот и бројните колони, дури и
+       кога OCR ги расипува бројките подоцна во редот (некој случаен неочекуван знак) */
+    let anchor=-1;
+    for(let i=tokens.length-1;i>=1;i--){ if(UNIT_RE.test(tokens[i])){ anchor=i; break; } }
+
+    let nameToks,dataToks,unit;
+    if(anchor>=0){
+      nameToks=tokens.slice(0,anchor);
+      dataToks=tokens.slice(anchor+1);
+      unit=tokens[anchor].replace(/[.:;,]+$/,'');
     }else{
-      qty=vals[0];
+      /* резервна варијанта без препознаена единица мерка: земи го најдолгиот нумерички суфикс */
+      let end=tokens.length;
+      while(end>0 && NUMTOK_RE.test(tokens[end-1])) end--;
+      nameToks=tokens.slice(0,end);
+      dataToks=tokens.slice(end);
+      unit='парчиња';
+      if(dataToks.length<2) continue; // премалку податоци — веројатно шум, не ред со артикл
     }
-    let nameToks=tokens.slice(0,end);
-    let unit='парчиња';
-    if(nameToks.length>1 && UNIT_RE.test(nameToks[nameToks.length-1])){ unit=nameToks.pop(); }
+    if(!nameToks.length||!dataToks.length) continue;
+
+    /* количината е ПРВАТА вредност веднаш по единицата мерка — позиционо сигурно, отпорно на
+       расипани децимали понатаму во редот (кои влијаат само на цена/рабат/ДДВ, не на количината) */
+    let qty=null, qtyUsed=0;
+    for(let i=0;i<dataToks.length;i++){
+      if(NUMTOK_RE.test(dataToks[i])){ qty=parseNum(dataToks[i]); qtyUsed=i+1; break; }
+    }
+    const restVals=dataToks.slice(qtyUsed).map(parseNum).filter(v=>v!=null);
+    let price=null, lineTotal=null;
+    if(qty!=null && restVals.length){
+      const found=findPriceTotal(qty,restVals);
+      if(found){ price=found.price; lineTotal=found.lineTotal; }
+      else{ price=restVals[0]; lineTotal=restVals.length>1?restVals[restVals.length-1]:null; }
+    }
+
     let name=nameToks.join(' ').trim().replace(/[·.\-–_]+$/,'').trim();
     if(name.length<2) continue;
     let code='';
