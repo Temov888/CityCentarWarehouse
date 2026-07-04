@@ -1273,15 +1273,22 @@ function orderForm(){
    ФАКТУРА OCR (Claude vision)
 ======================================================================= */
 /* 1568px на подолгата страна е препорачаниот максимум за OCR точност кај Claude vision — над тоа само трошиш повеќе без подобрување */
-async function fileToResized(file,max=1568,q=0.92,forOCR=false){
+async function fileToResized(file,max=1568,q=0.92,forOCR=false,rotateDeg=0){
   const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
-  let{width:w,height:h}=img; const sc=Math.min(1,max/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc);
+  let{width:sw,height:sh}=img; const sc=Math.min(1,max/Math.max(sw,sh));
+  const dw=Math.round(sw*sc), dh=Math.round(sh*sc);
+  const swapped=rotateDeg===90||rotateDeg===270;
+  const w=swapped?dh:dw, h=swapped?dw:dh;
   const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
   const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);
   ctx.imageSmoothingQuality='high';
   // благо засилување контраст/осветленост — помага кај фотографии од градилиште со лошо осветлување
   try{ ctx.filter='contrast(1.14) brightness(1.05) saturate(0.92)'; }catch(e){}
-  ctx.drawImage(img,0,0,w,h);
+  ctx.save();
+  ctx.translate(w/2,h/2);
+  if(rotateDeg) ctx.rotate(rotateDeg*Math.PI/180);
+  ctx.drawImage(img,-dw/2,-dh/2,dw,dh);
+  ctx.restore();
   if(forOCR) grayscaleAndStretch(ctx,w,h);
   return cv.toDataURL('image/jpeg',q).split(',')[1];
 }
@@ -1309,9 +1316,20 @@ function parseNum(v){
   if(typeof v==='number')return isFinite(v)?v:null;
   let s=String(v).trim().replace(/[^\d.,\-]/g,'');
   if(!s)return null;
-  const hasC=s.includes(','), hasD=s.includes('.');
-  if(hasC&&hasD) s=s.replace(/\./g,'').replace(',','.');
-  else if(hasC) s=s.replace(',','.');
+  /* некои фактури се македонски формат (точка=илјади, запирка=децимала: "27.756,00"),
+     други се меѓународен формат (запирка=илјади, точка=децимала: "27,756.00") — ако и двата
+     разделувачи постојат, десниот (последниот во низата) е децималниот, а не секогаш запирката */
+  const lastC=s.lastIndexOf(','), lastD=s.lastIndexOf('.');
+  if(lastC>-1&&lastD>-1){
+    if(lastC>lastD) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(/,/g,'');
+  }else if(lastC>-1){
+    const fracLen=s.length-lastC-1;
+    s = fracLen<=2 ? s.replace(',','.') : s.replace(/,/g,'');
+  }else if(lastD>-1){
+    const fracLen=s.length-lastD-1;
+    if(fracLen>2) s=s.replace(/\./g,'');
+  }
   const n=parseFloat(s);
   return isFinite(n)?n:null;
 }
@@ -1419,40 +1437,96 @@ function ocrProgressLabel(m){
     :m.status||'Работам';
   return label+(pct!=null?` ${pct}%`:'…');
 }
-/* ги извлекува редовите-артикли од сирoв OCR текст со хеуристика: последните бројки на редот = кол./цена/износ */
+/* пробува да најде количина×цена=износ комбинација меѓу броевите на редот — робусно кај фактури
+   со дополнителни колони меѓу количината и износот (рабат %, износ на рабат, ДДВ % и сл.),
+   наместо да претпоставува дека количина/цена/износ се секогаш последните 3 броја во редот */
+function findConsistentTriple(vals){
+  let best=null;
+  for(let i=0;i<vals.length;i++){
+    if(!(vals[i]>0)) continue;
+    for(let j=0;j<vals.length;j++){
+      if(j===i||!(vals[j]>0)) continue;
+      const calc=vals[i]*vals[j];
+      for(let k=0;k<vals.length;k++){
+        if(k===i||k===j) continue;
+        const total=vals[k]; if(total==null) continue;
+        if(Math.abs(calc-total)<=Math.max(0.5,Math.abs(total)*0.015)){
+          const score=i*100+j;
+          if(!best||score<best.score) best={qty:vals[i],price:vals[j],lineTotal:total,score};
+        }
+      }
+    }
+  }
+  return best;
+}
+/* ги извлекува редовите-артикли од сирoв OCR текст */
 function parseInvoiceTextToItems(text){
   const IGNORE=/(подзбир|меѓузбир|вкупно|за плаќање|основиц|ддв|данок|попуст|рекапитулациј|износ на фактура|платено|жиро|iban|фактура бр|датум|купувач|продавач)/i;
-  const numRe=/-?\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?|-?\d+(?:[.,]\d+)?/g;
+  const LEADTOK_RE=/^[\d.,\/\-]+$/;
+  const NUMTOK_RE=/^-?\d[\d.,]*%?$/;
+  const UNIT_RE=/^(пар|ком|кг|тон|м2|м3|л|ролна|пакет|м)\.?$/i;
   const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
   const items=[];
-  for(let line of lines){
-    if(IGNORE.test(line)) continue;
-    /* отстрани реден број на почетокот на редот (пр. "1. ", "12) ") пред да ги бараме броевите —
-       инаку тој реден број погрешно се зема како прв "број" во редот и целото име на артиклот исчезнува */
-    line=line.replace(/^\d{1,3}[.\)]\s+(?=\D)/,'');
-    const nums=[...line.matchAll(numRe)];
-    if(!nums.length) continue;
+  for(const rawLine of lines){
+    if(IGNORE.test(rawLine)) continue;
+    let tokens=rawLine.split(/\s+/).filter(Boolean);
+    /* отстрани реден број / шифра на почетокот на редот (табеларни колони пред описот, пр.
+       "Ред.бр" и "ИД") — инаку тие погрешно се земаат како прв "број" во редот и името исчезнува */
+    let lead=0;
+    while(lead<tokens.length-1 && lead<3 && LEADTOK_RE.test(tokens[lead]) && /\d/.test(tokens[lead])) lead++;
+    if(lead) tokens=tokens.slice(lead);
+    /* земи го најдолгиот суфикс од „чисто нумерички" токени од крајот на редот — тоа се
+       вредностите (кол./рабат/цена/износ…). Сѐ пред нив е името, дури и ако името содржи
+       бројки (пр. "ЦЕВ 110/2000", "ШТРАФ 5*40") — тие токени не се „чисто" нумерички. */
+    let end=tokens.length;
+    while(end>0 && NUMTOK_RE.test(tokens[end-1])) end--;
+    const numToks=tokens.slice(end);
+    if(!numToks.length) continue;
+    const vals=numToks.map(parseNum).filter(v=>v!=null);
+    if(!vals.length) continue;
     let qty=null, price=null, lineTotal=null;
-    if(nums.length>=3){
-      lineTotal=parseNum(nums[nums.length-1][0]);
-      price=parseNum(nums[nums.length-2][0]);
-      qty=parseNum(nums[nums.length-3][0]);
-    }else if(nums.length===2){
-      price=parseNum(nums[nums.length-1][0]);
-      qty=parseNum(nums[nums.length-2][0]);
+    if(vals.length>=3){
+      const triple=findConsistentTriple(vals);
+      if(triple){ qty=triple.qty; price=triple.price; lineTotal=triple.lineTotal; }
+      else{
+        lineTotal=vals[vals.length-1];
+        price=vals[vals.length-2];
+        qty=vals[vals.length-3];
+      }
+    }else if(vals.length===2){
+      price=vals[1];
+      qty=vals[0];
     }else{
-      qty=parseNum(nums[0][0]);
+      qty=vals[0];
     }
-    let name=line.slice(0,nums[0].index).trim().replace(/[·.\-–_]+$/,'').trim();
-    name=name.replace(/^\d{1,3}[.\)]\s*/,'').trim();
+    let nameToks=tokens.slice(0,end);
+    let unit='парчиња';
+    if(nameToks.length>1 && UNIT_RE.test(nameToks[nameToks.length-1])){ unit=nameToks.pop(); }
+    let name=nameToks.join(' ').trim().replace(/[·.\-–_]+$/,'').trim();
     if(name.length<2) continue;
     let code='';
     const codeMatch=name.match(/^([A-Za-zА-Яа-я0-9\-\/]{3,16})\s+/);
     if(codeMatch && /\d/.test(codeMatch[1]) && /[A-Za-zА-Яа-я]/.test(codeMatch[1])){ code=codeMatch[1]; name=name.slice(codeMatch[0].length).trim(); }
     if(name.length<2) continue;
-    items.push({name,code,unit:'парчиња',qty,price,lineTotal});
+    items.push({name,code,unit,qty,price,lineTotal});
   }
   return items;
+}
+/* Tesseract не ротира сам слики — ако фактурата е сликана странично/наопаку (чест случај на градилиште),
+   читањето излегува празно или погрешно. Пробај ги 4-те можни ориентации на мала/брза слика и земи ја
+   онаа со најголема просечна доверба (data.confidence) пред целосното читање. */
+async function detectBestRotation(worker,file){
+  const angles=[0,90,180,270];
+  let best={angle:0,conf:-1};
+  for(const angle of angles){
+    try{
+      const b64=await fileToResized(file,700,0.75,false,angle);
+      const{data}=await worker.recognize('data:image/jpeg;base64,'+b64);
+      const conf=data.confidence||0;
+      if(conf>best.conf) best={angle,conf};
+    }catch(e){}
+  }
+  return best.angle;
 }
 async function scanInvoiceOffline(files){
   let allItems=[];
@@ -1460,14 +1534,15 @@ async function scanInvoiceOffline(files){
     for(let i=0;i<files.length;i++){
       openModal(`<div class="mhead"><h3>Офлајн читање…</h3></div>
       <div class="scanning"><div class="spin"></div>
-      <p style="color:var(--muted);margin-top:16px" id="ocrStatus">${files.length>1?`Страница ${i+1} од ${files.length} — п`:'П'}одготовка…</p>
+      <p style="color:var(--muted);margin-top:16px" id="ocrStatus">${files.length>1?`Страница ${i+1} од ${files.length} — п`:'П'}роверка на ориентација…</p>
       <p style="color:var(--faint);font-size:11.5px;margin-top:8px">Работи директно на уредот, без интернет (по прв пат)</p>
       <div class="bar"><i></i></div></div>`);
-      const b64=await fileToResized(files[i],2000,0.92,true);
       const worker=await getTesseractWorker(m=>{
         const st=document.getElementById('ocrStatus');
         if(st) st.textContent=(files.length>1?`Страница ${i+1} од ${files.length} — `:'')+ocrProgressLabel(m);
       });
+      const angle=await detectBestRotation(worker,files[i]);
+      const b64=await fileToResized(files[i],2000,0.92,true,angle);
       const{data:{text}}=await worker.recognize('data:image/jpeg;base64,'+b64);
       allItems=allItems.concat(parseInvoiceTextToItems(text));
     }
